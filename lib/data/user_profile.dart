@@ -1,5 +1,4 @@
 // lib/data/user_profile.dart
-import 'dart:convert';
 
 /// Enum for temple recommend status
 enum TempleRecommendStatus {
@@ -54,6 +53,25 @@ enum Gender {
   }
 }
 
+// Opciones de Complexión
+const List<String> kBodyTypeOptions = [
+  'Atlética / Tonificada 🏃',
+  'Promedio ⚖️',
+  'Con Curvas / Robusto 🍑',
+  'Fuera de mi talla ✨',
+];
+
+const List<String> kInterestOptions = [
+  'Templo 🏰', 'Misionero 👔', 'Genealogía 🌳', 'Noche de Hogar 🏠', 
+  'Servicio 🤝', 'Escrituras 📖', 'Instituto 🎓', 'Coro 🎵', 
+  'Himnos 🎶', 'Conferencia General 🎙️', 'Actividades de Barrio 🎉', 
+  'Baile 💃', 'Cocina 🍳', 'Deporte ⚽', 'Naturaleza 🌲', 
+  'Cine 🎬', 'Música 🎧', 'Lectura 📚', 'Tecnología 💻', 
+  'Arte 🎨', 'Viajes ✈️', 'Fotografía 📷', 'Idiomas 🗣️', 
+  'Juegos de Mesa 🎲', 'Camping ⛺', 'Senderismo 🥾', 
+  'Ciclismo 🚴', 'Mascotas 🐾', 'Voluntariado ❤️', 'Teatro 🎭'
+];
+
 /// Comprehensive user profile model for LDS dating app
 class UserProfile {
   // Basic Information
@@ -62,6 +80,7 @@ class UserProfile {
   final Gender? gender;
   final int? heightCm; // Height in centimeters
   final String? location; // City, State
+  final String? bodyType; // Nueva: Complexión
 
   // LDS-Specific Information
   final String? stakeWard; // e.g., "Ciudad de México Stake, Polanco Ward"
@@ -88,6 +107,7 @@ class UserProfile {
     this.gender,
     this.heightCm,
     this.location,
+    this.bodyType,
     this.stakeWard,
     this.missionServed,
     this.missionYears,
@@ -163,6 +183,7 @@ class UserProfile {
       'bio': bio,
       'education': education,
       'occupation': occupation,
+      'bodyType': bodyType,
       'interests': interests,
       'profilePhotoUrl': profilePhotoUrl,
       'photoUrls': photoUrls,
@@ -193,6 +214,7 @@ class UserProfile {
       bio: json['bio'] as String?,
       education: json['education'] as String?,
       occupation: json['occupation'] as String?,
+      bodyType: json['bodyType'] as String?,
       interests: (json['interests'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
@@ -222,6 +244,7 @@ class UserProfile {
     String? bio,
     String? education,
     String? occupation,
+    String? bodyType,
     List<String>? interests,
     String? profilePhotoUrl,
     List<String>? photoUrls,
@@ -242,6 +265,7 @@ class UserProfile {
       bio: bio ?? this.bio,
       education: education ?? this.education,
       occupation: occupation ?? this.occupation,
+      bodyType: bodyType ?? this.bodyType,
       interests: interests ?? this.interests,
       profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
       photoUrls: photoUrls ?? this.photoUrls,

@@ -363,7 +363,8 @@ class _MatchOrangeOverlayState extends State<MatchOrangeOverlay>
                                   child: Container(
                                     padding: const EdgeInsets.all(16),
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         // Texto "MATCH"
                                         Text(
@@ -376,7 +377,8 @@ class _MatchOrangeOverlayState extends State<MatchOrangeOverlay>
                                             shadows: [
                                               Shadow(
                                                 blurRadius: 20,
-                                                color: Colors.black.withOpacity(0.8),
+                                                color: Colors.black
+                                                    .withOpacity(0.8),
                                                 offset: const Offset(0, 4),
                                               ),
                                               Shadow(
@@ -399,7 +401,8 @@ class _MatchOrangeOverlayState extends State<MatchOrangeOverlay>
                                             shadows: [
                                               Shadow(
                                                 blurRadius: 15,
-                                                color: Colors.black.withOpacity(0.7),
+                                                color: Colors.black
+                                                    .withOpacity(0.7),
                                                 offset: const Offset(0, 2),
                                               ),
                                             ],
@@ -497,8 +500,10 @@ class _OrangeHalf extends StatelessWidget {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  begin: isLeftHalf ? Alignment.centerLeft : Alignment.centerRight,
-                  end: isLeftHalf ? Alignment.centerRight : Alignment.centerLeft,
+                  begin:
+                      isLeftHalf ? Alignment.centerLeft : Alignment.centerRight,
+                  end:
+                      isLeftHalf ? Alignment.centerRight : Alignment.centerLeft,
                   colors: [
                     Colors.orange.withOpacity(0.25),
                     Colors.deepOrange.withOpacity(0.15),

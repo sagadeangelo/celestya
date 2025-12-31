@@ -24,8 +24,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/app_icon.png      # 👈 AHORA APUNTA A LA CARPETA images
-    - assets/orange_texture.png       # 👈 ESTA QUEDA IGUAL
+    - assets/images/app_icon.png      # app assets now inside `celestya/assets/images`
+    - assets/orange_texture.png       # textura naranja dentro del proyecto
 
 flutter_launcher_icons:
   android: true

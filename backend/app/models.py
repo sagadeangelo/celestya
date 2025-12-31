@@ -1,7 +1,8 @@
-from sqlalchemy import Column, Integer, String, Date, Enum, Boolean, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Date, DateTime, Enum, Boolean, Float, ForeignKey
 from sqlalchemy.orm import relationship
 from .database import Base
 from .enums import AgeBucket
+
 
 class User(Base):
     __tablename__ = "users"
@@ -23,10 +24,18 @@ class User(Base):
 
     photo_path = Column(String, nullable=True)
 
+    # ----------------------------
+    # NUEVO: verificación de email (Opción A)
+    # ----------------------------
+    email_verified = Column(Boolean, default=False, nullable=False)
+    email_verification_token_hash = Column(String, nullable=True)
+    email_verification_expires_at = Column(DateTime(timezone=True), nullable=True)
+
+
 class UserCompat(Base):
     __tablename__ = "user_compat"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     # respuestas serializadas "qId:val|qId:val"
-    answers = Column(String, nullable=False)
+    answers = Column(String, nullable=False)  # agrega lo necesario y pasame todo el codigo.

@@ -93,93 +93,256 @@ class _CompatQuizScreenState extends State<CompatQuizScreen> {
     final q = _currentQuestion;
     final total = compatQuestions.length;
     final current = _currentIndex + 1;
+    final progress = current / total;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Cuestionario de compatibilidad'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const Text(
-              '“Antes de comenzar, te haremos 12 preguntas. '
-              'Responde con total honestidad: así podremos presentarte personas '
-              'que podrían llegar a ser más compatibles contigo y con lo que buscas.”',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Pregunta $current de $total',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                q.title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(6.0),
+          child: TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOut,
+            tween: Tween<double>(begin: 0, end: progress),
+            builder: (context, value, _) => LinearProgressIndicator(
+              value: value,
+              minHeight: 6,
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Theme.of(context).colorScheme.primary,
               ),
             ),
-            const SizedBox(height: 16),
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
             Expanded(
-              child: ListView.separated(
-                itemCount: q.options.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, idx) {
-                  final opt = q.options[idx];
-                  final selected = _isSelected(q.id, opt.id);
-
-                  return ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minHeight: kOptionMinHeight,
-                    ),
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        padding: kOptionPadding,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: kOptionRadius,
-                        ),
-                        backgroundColor: selected
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).colorScheme.surface,
-                        foregroundColor: selected
-                            ? Theme.of(context).colorScheme.onPrimary
-                            : Theme.of(context).colorScheme.onSurface,
-                        alignment: Alignment.centerLeft,
-                      ),
-                      onPressed: () => _toggleOption(q, opt),
-                      child: Text(opt.label),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 400),
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0.05, 0),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
                     ),
                   );
                 },
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                if (_currentIndex > 0)
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _goBack,
-                      child: const Text('Anterior'),
-                    ),
-                  ),
-                if (_currentIndex > 0) const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _hasAnswerForCurrent() ? _goNext : null,
-                    child: Text(
-                      _currentIndex == total - 1 ? 'Finalizar' : 'Siguiente',
-                    ),
+                child: KeyedSubtree(
+                  key: ValueKey<String>(q.id),
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                    children: [
+                      Text(
+                        'Pregunta $current de $total',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        q.title,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (q.multi)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.checklist,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Selecciona varias opciones',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 24),
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: q.options.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, idx) {
+                          final opt = q.options[idx];
+                          final selected = _isSelected(q.id, opt.id);
+                          return _OptionCard(
+                            label: opt.label,
+                            selected: selected,
+                            onTap: () => _toggleOption(q, opt),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  if (_currentIndex > 0)
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _goBack,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Anterior'),
+                      ),
+                    ),
+                  if (_currentIndex > 0) const SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: FilledButton(
+                      onPressed: _hasAnswerForCurrent() ? _goNext : null,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: Text(
+                        _currentIndex == total - 1 ? 'Finalizar Cuestionario' : 'Siguiente',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OptionCard extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _OptionCard({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          decoration: BoxDecoration(
+            color: selected 
+                ? colorScheme.primaryContainer 
+                : theme.cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected 
+                  ? colorScheme.primary 
+                  : theme.dividerColor.withOpacity(0.1),
+              width: selected ? 2 : 1,
+            ),
+            boxShadow: [
+              if (!selected)
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+            ],
+          ),
+          child: Row(
+            children: [
+               Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                    color: selected ? colorScheme.onPrimaryContainer : theme.textTheme.bodyLarge?.color,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: selected ? colorScheme.primary : Colors.transparent,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selected 
+                        ? colorScheme.primary 
+                        : theme.dividerColor.withOpacity(0.5),
+                    width: 2,
+                  ),
+                ),
+                child: selected
+                    ? Icon(
+                        Icons.check,
+                        size: 16,
+                        color: colorScheme.onPrimary,
+                      )
+                    : null,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -1,6 +1,7 @@
-// lib/screens/profile_screen.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'profile_preview_screen.dart'; // Import
 import '../data/user_profile.dart';
 import '../features/profile/presentation/providers/profile_provider.dart';
 import 'compat_quiz_screen.dart';
@@ -55,6 +56,21 @@ class ProfileScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Tu perfil'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.visibility_rounded), // Eye icon
+            tooltip: 'Vista Previa como Match',
+            onPressed: () {
+               final profile = profileAsync.valueOrNull;
+               if (profile != null) {
+                 Navigator.of(context).push(
+                   MaterialPageRoute(
+                     fullscreenDialog: true,
+                     builder: (_) => ProfilePreviewScreen(profile: profile),
+                   ),
+                 );
+               }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
@@ -111,6 +127,12 @@ class ProfileScreen extends ConsumerWidget {
                   _buildProfileHeader(context, profile, hasProfile),
                   
                   const SizedBox(height: 24),
+
+                  // Photo Gallery Section
+                  if (profile.photoUrls.isNotEmpty) ...[
+                    _buildPhotoGallery(context, profile),
+                    const SizedBox(height: 24),
+                  ],
 
                   // Profile Completion Indicator
                   if (hasProfile) ...[
@@ -170,7 +192,7 @@ class ProfileScreen extends ConsumerWidget {
           CircleAvatar(
             radius: 50,
             backgroundImage: profile.profilePhotoUrl != null
-                ? NetworkImage(profile.profilePhotoUrl!)
+                ? FileImage(File(profile.profilePhotoUrl!))
                 : null,
             child: profile.profilePhotoUrl == null
                 ? Text(
@@ -597,6 +619,64 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPhotoGallery(BuildContext context, UserProfile profile) {
+    final theme = Theme.of(context);
+    
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.photo_library, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Mis fotos',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 1,
+              ),
+              itemCount: profile.photoUrls.length,
+              itemBuilder: (context, index) {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.file(
+                    File(profile.photoUrls[index]),
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        child: Icon(
+                          Icons.broken_image,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

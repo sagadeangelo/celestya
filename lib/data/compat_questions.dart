@@ -139,10 +139,20 @@ const List<CompatQuestion> compatQuestions = [
       CompatOption(id: 'direct', label: 'Soy muy directo, aunque a veces intenso'),
     ],
   ),
+  CompatQuestion(
+    id: 'q13_body_type',
+    title: '¿Cómo describirías tu complexión física?',
+    options: [
+      CompatOption(id: 'athletic', label: 'Atlética / Tonificada 🏃'),
+      CompatOption(id: 'average', label: 'Promedio ⚖️'),
+      CompatOption(id: 'curvy', label: 'Con Curvas / Robusto 🍑'),
+      CompatOption(id: 'other', label: 'Fuera de mi talla ✨'),
+    ],
+  ),
 ];
 
 /// Estilo recomendado para los botones de opción.
 const double kOptionMinHeight = 56;
 const EdgeInsets kOptionPadding =
-    EdgeInsets.symmetric(horizontal: 16, vertical: 14);
+    EdgeInsets.symmetric(horizontal: 20, vertical: 16);
 final BorderRadius kOptionRadius = BorderRadius.circular(14);

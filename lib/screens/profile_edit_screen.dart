@@ -1,8 +1,12 @@
 // lib/screens/profile_edit_screen.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../data/user_profile.dart';
 import '../services/profile_service.dart';
+import '../widgets/photo_picker_widget.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   final UserProfile profile;
@@ -35,12 +39,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   late TextEditingController _bioController;
   late TextEditingController _educationController;
   late TextEditingController _occupationController;
-  late TextEditingController _interestsController;
+  // Removed _interestsController in favor of list selection
+  List<String> _selectedInterests = [];
   
   // Dropdown values
   Gender? _selectedGender;
   TempleRecommendStatus? _selectedTempleRecommend;
   ActivityLevel? _selectedActivityLevel;
+  String? _selectedBodyType;
+  
+  // Photo paths
+  String? _profilePhotoPath;
+  List<String> _additionalPhotoPaths = [];
 
   @override
   void initState() {
@@ -63,13 +73,16 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _bioController = TextEditingController(text: widget.profile.bio);
     _educationController = TextEditingController(text: widget.profile.education);
     _occupationController = TextEditingController(text: widget.profile.occupation);
-    _interestsController = TextEditingController(
-      text: widget.profile.interests.join(', '),
-    );
+    _selectedInterests = List.from(widget.profile.interests);
     
     _selectedGender = widget.profile.gender;
     _selectedTempleRecommend = widget.profile.templeRecommend;
     _selectedActivityLevel = widget.profile.activityLevel;
+    _selectedBodyType = widget.profile.bodyType;
+    
+    // Initialize photo paths
+    _profilePhotoPath = widget.profile.profilePhotoUrl;
+    _additionalPhotoPaths = List.from(widget.profile.photoUrls);
   }
 
   @override
@@ -86,8 +99,76 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _bioController.dispose();
     _educationController.dispose();
     _occupationController.dispose();
-    _interestsController.dispose();
+    // _interestsController removed
     super.dispose();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Test if location services are enabled.
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Los servicios de ubicación están desactivados.')),
+        );
+      }
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Permisos de ubicación denegados')),
+          );
+        }
+        return;
+      }
+    }
+    
+    if (permission == LocationPermission.deniedForever) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Permisos de ubicación permanentemente denegados')),
+        );
+      }
+      return;
+    } 
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Obteniendo ubicación...')),
+      );
+    }
+
+    try {
+      final position = await Geolocator.getCurrentPosition();
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude, 
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+        setState(() {
+          _locationController.text = '${place.locality}, ${place.administrativeArea}';
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error obteniendo ubicación: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _saveProfile() async {
@@ -97,12 +178,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     setState(() => _saving = true);
 
-    // Parse interests from comma-separated string
-    final interestsList = _interestsController.text
-        .split(',')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
+    setState(() => _saving = true);
+
+    // Interests are already in _selectedInterests list
 
     final updatedProfile = UserProfile(
       name: _nameController.text.trim(),
@@ -123,6 +201,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           : _missionYearsController.text.trim(),
       templeRecommend: _selectedTempleRecommend,
       activityLevel: _selectedActivityLevel,
+      bodyType: _selectedBodyType,
       favoriteCalling: _favoriteCallingController.text.trim().isEmpty
           ? null
           : _favoriteCallingController.text.trim(),
@@ -138,9 +217,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       occupation: _occupationController.text.trim().isEmpty
           ? null
           : _occupationController.text.trim(),
-      interests: interestsList,
-      profilePhotoUrl: widget.profile.profilePhotoUrl,
-      photoUrls: widget.profile.photoUrls,
+      interests: _selectedInterests, // Updated from text input
+      profilePhotoUrl: _profilePhotoPath,
+      photoUrls: _additionalPhotoPaths,
     );
 
     final success = await _profileService.saveProfile(updatedProfile);
@@ -162,6 +241,46 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _pickProfilePhoto() async {
+    final photoPath = await ImagePickerHelper.pickImage(context);
+    if (photoPath != null) {
+      setState(() {
+        _profilePhotoPath = photoPath;
+      });
+    }
+  }
+
+  Future<void> _pickAdditionalPhoto() async {
+    if (_additionalPhotoPaths.length >= 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Máximo 6 fotos adicionales'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final photoPath = await ImagePickerHelper.pickImage(context);
+    if (photoPath != null) {
+      setState(() {
+        _additionalPhotoPaths.add(photoPath);
+      });
+    }
+  }
+
+  void _removeProfilePhoto() {
+    setState(() {
+      _profilePhotoPath = null;
+    });
+  }
+
+  void _removeAdditionalPhoto(int index) {
+    setState(() {
+      _additionalPhotoPaths.removeAt(index);
+    });
   }
 
   @override
@@ -195,6 +314,76 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
+            // Photos Section
+            _buildSectionHeader('Fotos', Icons.photo_library),
+            const SizedBox(height: 16),
+            
+            // Profile Photo
+            Center(
+              child: Column(
+                children: [
+                  PhotoPickerWidget(
+                    photoPath: _profilePhotoPath,
+                    onTap: _pickProfilePhoto,
+                    onRemove: _profilePhotoPath != null ? _removeProfilePhoto : null,
+                    isMainPhoto: true,
+                    size: 140,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Foto de perfil (requerida)',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Additional Photos
+            Text(
+              'Fotos adicionales (hasta 6)',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 12),
+            
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+              ),
+              itemCount: _additionalPhotoPaths.length < 6 
+                  ? _additionalPhotoPaths.length + 1 
+                  : 6,
+              itemBuilder: (context, index) {
+                if (index < _additionalPhotoPaths.length) {
+                  // Show existing photo
+                  return PhotoPickerWidget(
+                    photoPath: _additionalPhotoPaths[index],
+                    onTap: () {}, // No action on tap for existing photos
+                    onRemove: () => _removeAdditionalPhoto(index),
+                    size: 100,
+                  );
+                } else {
+                  // Show add button
+                  return PhotoPickerWidget(
+                    photoPath: null,
+                    onTap: _pickAdditionalPhoto,
+                    size: 100,
+                  );
+                }
+              },
+            ),
+            
+            const SizedBox(height: 32),
+            
             // Basic Information Section
             _buildSectionHeader('Información básica', Icons.person),
             const SizedBox(height: 16),
@@ -242,7 +431,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: DropdownButtonFormField<Gender>(
-                    value: _selectedGender,
+                    initialValue: _selectedGender,
                     decoration: const InputDecoration(
                       labelText: 'Género',
                       border: OutlineInputBorder(),
@@ -290,13 +479,37 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               },
             ),
             const SizedBox(height: 16),
-            
+
+            // Complexión (Nuevo)
+            DropdownButtonFormField<String>(
+              initialValue: _selectedBodyType,
+              decoration: const InputDecoration(
+                labelText: 'Complexión Física',
+                helperText: 'Como te describes a ti mismo',
+                prefixIcon: Icon(Icons.accessibility_new),
+                border: OutlineInputBorder(),
+              ),
+              items: kBodyTypeOptions.map((type) {
+                return DropdownMenuItem(
+                  value: type,
+                  child: Text(type),
+                );
+              }).toList(),
+              onChanged: (value) => setState(() => _selectedBodyType = value),
+            ),
+            const SizedBox(height: 16),
+                        
             TextFormField(
               controller: _locationController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Ubicación',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.location_on),
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.location_on),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.my_location, color: Colors.blue),
+                  onPressed: _getCurrentLocation,
+                  tooltip: 'Usar mi ubicación GPS',
+                ),
                 helperText: 'Ciudad, Estado',
               ),
             ),
@@ -341,7 +554,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             const SizedBox(height: 16),
             
             DropdownButtonFormField<TempleRecommendStatus>(
-              value: _selectedTempleRecommend,
+              initialValue: _selectedTempleRecommend,
               decoration: const InputDecoration(
                 labelText: 'Recomendación del templo',
                 border: OutlineInputBorder(),
@@ -360,7 +573,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             const SizedBox(height: 16),
             
             DropdownButtonFormField<ActivityLevel>(
-              value: _selectedActivityLevel,
+              initialValue: _selectedActivityLevel,
               decoration: const InputDecoration(
                 labelText: 'Nivel de actividad',
                 border: OutlineInputBorder(),
@@ -418,15 +631,30 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             ),
             const SizedBox(height: 16),
             
-            TextFormField(
-              controller: _interestsController,
-              decoration: const InputDecoration(
-                labelText: 'Intereses',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.interests),
-                helperText: 'Separados por comas: lectura, deportes, música',
-              ),
-              maxLines: 2,
+            Text(
+              'Intereses (Selecciona al menos 3)',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 4.0,
+              children: kInterestOptions.map((interest) {
+                final isSelected = _selectedInterests.contains(interest);
+                return FilterChip(
+                  label: Text(interest),
+                  selected: isSelected,
+                  onSelected: (bool selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedInterests.add(interest);
+                      } else {
+                        _selectedInterests.remove(interest);
+                      }
+                    });
+                  },
+                );
+              }).toList(),
             ),
             
             const SizedBox(height: 32),

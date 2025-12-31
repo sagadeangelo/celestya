@@ -1,7 +1,6 @@
 // lib/core/widgets/celestya_input.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../theme/design_tokens.dart';
 
 /// TextField personalizado de Celestya con validación y estilos consistentes
 class CelestyaInput extends StatelessWidget {

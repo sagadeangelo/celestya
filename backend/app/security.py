@@ -1,5 +1,7 @@
 import os
-from datetime import datetime, timedelta
+import secrets
+import hashlib
+from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from jose import jwt
 
@@ -22,4 +24,19 @@ def create_access_token(sub: int) -> str:
 
 def decode_token(token: str) -> int:
     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGO])
-    return int(payload["sub"])
+    return int(payload["sub"])  # ya tenia esto, no se reemplaza
+
+# ----------------------------
+# NUEVO: helpers para verificación de email (Opción A)
+# ----------------------------
+
+def utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+def make_token() -> str:
+    # token largo, seguro para enviar por URL
+    return secrets.token_urlsafe(32)
+
+def hash_token(token: str) -> str:
+    # guardas el hash, no el token plano
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()

@@ -1,5 +1,4 @@
 // lib/core/theme/design_tokens.dart
-import 'package:flutter/material.dart';
 
 /// Sistema de tokens de diseño para Celestya
 /// Proporciona valores consistentes para espaciado, radios, elevaciones y animaciones
