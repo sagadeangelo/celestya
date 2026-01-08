@@ -7,6 +7,7 @@ import '../features/matching/presentation/providers/filter_provider.dart';
 import '../features/matching/presentation/widgets/filter_bottom_sheet.dart';
 import '../widgets/match_orange_overlay.dart';
 import '../widgets/premium_match_card.dart';
+import '../widgets/empty_state.dart';
 
 // Mock user photo URL
 const String kMockUserPhotoUrl = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1887&auto=format&fit=crop';
@@ -179,21 +180,12 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
              onPressed: () => _showFilters(context),
           ),
         ),
-        body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  "No hay matches con estos filtros 🧐",
-                  style: TextStyle(fontSize: 18),
-                ),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () => ref.read(filterProvider.notifier).resetFilters(),
-                  child: const Text("Limpiar filtros"),
-                )
-              ],
-            ),
+        body: EmptyState(
+          icon: Icons.search_off,
+          title: 'No hay matches con estos filtros',
+          message: 'Intenta ajustar tus preferencias para ver más perfiles compatibles',
+          actionLabel: 'Limpiar filtros',
+          onAction: () => ref.read(filterProvider.notifier).resetFilters(),
         ),
       );
     }

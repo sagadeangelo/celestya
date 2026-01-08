@@ -18,7 +18,7 @@ from ..app.emailer import send_email, verification_email_html  # ✅ correcto: b
 
 router = APIRouter()
 
-PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://127.0.0.1:8000")
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://192.168.1.84:8002")
 
 
 def _calc_age(birth: d) -> int:
