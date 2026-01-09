@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .database import Base, engine
-from .routes import auth, users, matches
+from app.routes import auth, users, matches
 
 
 # ✅ Base del proyecto (carpeta donde está /app)
