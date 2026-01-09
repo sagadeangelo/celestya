@@ -4,7 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiClient {
   // ⚠️ Cambia esto a tu backend
-  static const String API_BASE = 'https://celestya-api.lasagadeangelo.com.mx';
+  static const String API_BASE = 'https://celestya-backend.fly.dev';
+
 
   static Future<Map<String, String>> _headers({bool withAuth = true}) async {
     final headers = <String, String>{
