@@ -14,7 +14,7 @@ from ..security import (
     utcnow,
 )
 from ..enums import AgeBucket
-from ..app.emailer import send_email, verification_email_html  # ✅ correcto: backend/app/emailer.py
+from app.emailer import send_email, verification_email_html       # ✅ correcto: backend/app/emailer.py
 
 router = APIRouter()
 
