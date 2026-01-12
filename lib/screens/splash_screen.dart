@@ -93,8 +93,29 @@ class _SplashScreenState extends State<SplashScreen>
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: CelestyaColors.mainGradient,
+          color: CelestyaColors.spaceBlack, // Base
+          gradient: RadialGradient(
+            center: Alignment.topCenter,
+            radius: 1.5,
+            colors: [
+              Color(0xFF2E1C4E), // Diffused Purple (Nebula Core)
+              CelestyaColors.spaceBlack,
+            ],
+            stops: [0.0, 0.8],
+          ),
+          image: null, // Could add star pattern here later
         ),
+        child: Container(
+          decoration: BoxDecoration(
+             gradient: LinearGradient(
+               begin: Alignment.topCenter,
+               end: Alignment.bottomCenter,
+               colors: [
+                 CelestyaColors.celestialBlue.withOpacity(0.15), // Soft diffused blue veil
+                 Colors.transparent,
+               ],
+             )
+          ),
         child: Center(
           child: AnimatedBuilder(
             animation: _controller,
@@ -154,6 +175,7 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           ),
         ),
+       ),
       ),
     );
   }
