@@ -1,0 +1,5 @@
+app = "celestya"
+
+[build]
+  dockerfile = "backend/Dockerfile"
+

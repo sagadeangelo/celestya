@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../theme/app_theme.dart';
 import 'auth_gate.dart';
+import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -55,13 +58,20 @@ class _SplashScreenState extends State<SplashScreen>
     _controller.forward();
 
     // Navegar después de 3 segundos
-    Future.delayed(const Duration(seconds: 3), () {
+    Future.delayed(const Duration(seconds: 3), () async {
       if (mounted) {
         // Restaurar UI overlay
         SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+        // Check onboarding status
+        final prefs = await SharedPreferences.getInstance();
+        final seenOnboarding = prefs.getBool('onboarding_completed') ?? false;
+        
+        if (!mounted) return;
+
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
-            pageBuilder: (_, __, ___) => const AuthGate(),
+            pageBuilder: (_, __, ___) => seenOnboarding ? const AuthGate() : const OnboardingScreen(),
             transitionsBuilder: (_, animation, __, child) {
               return FadeTransition(opacity: animation, child: child);
             },
@@ -83,15 +93,7 @@ class _SplashScreenState extends State<SplashScreen>
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFFDF7FF),
-              Color(0xFFF5F0FF),
-              Color(0xFFEDE9FE),
-            ],
-          ),
+          gradient: CelestyaColors.mainGradient,
         ),
         child: Center(
           child: AnimatedBuilder(
@@ -129,22 +131,13 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
                 const SizedBox(height: 32),
                 // Nombre con gradiente
-                ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: [
-                      Color(0xFFFF6BA6),
-                      Color(0xFF9B5CFF),
-                      Color(0xFF246BFF),
-                    ],
-                  ).createShader(bounds),
-                  child: const Text(
-                    'Celestya',
-                    style: TextStyle(
-                      fontSize: 42,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                      color: Colors.white,
-                    ),
+                const Text(
+                  'Celestya',
+                  style: TextStyle(
+                    fontSize: 42,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -153,7 +146,7 @@ class _SplashScreenState extends State<SplashScreen>
                   'Tu media naranja te espera ✨',
                   style: TextStyle(
                     fontSize: 16,
-                    color: const Color(0xFF9B5CFF).withOpacity(0.8),
+                    color: Colors.white.withOpacity(0.8),
                     letterSpacing: 0.5,
                   ),
                 ),

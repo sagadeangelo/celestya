@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../data/compat_questions.dart';
 import 'package:Celestya/services/compat_storage.dart';
+import 'package:Celestya/services/quiz_api.dart'; // Importar QuizApi
 
 class CompatQuizScreen extends StatefulWidget {
   const CompatQuizScreen({super.key});
@@ -68,24 +69,53 @@ class _CompatQuizScreenState extends State<CompatQuizScreen> {
   }
 
   Future<void> _finishQuiz() async {
+    // 1. Loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+    );
+
     // Convertimos Set<String> -> List<String> para poder guardar como JSON.
     final Map<String, dynamic> toSave = _answers.map(
       (key, value) => MapEntry(key, value.toList()),
     );
 
+    // 2. Guardar Localmente (Respaldo)
     await CompatStorage.saveAnswers(toSave);
 
-    if (!mounted) return;
+    try {
+      // 3. Guardar en Backend
+      await QuizApi.saveQuizAnswers(toSave);
+      
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Cerrar dialog loading
+      Navigator.of(context).pop(); // Cerrar pantalla quiz
 
-    Navigator.of(context).pop();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Gracias por responder tu cuestionario de compatibilidad ✨',
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            '¡Respuestas guardadas exitosamente en tu perfil! ✨',
+          ),
+          backgroundColor: Colors.green,
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Cerrar dialog loading
+
+      // Si falla API, al menos se guardó local. Avisamos al usuario pero cerramos.
+      // Opcional: Podríamos NO cerrar y dejar reintentar. 
+      // Por ahora cerramos para no bloquear, asumiendo "offline first"
+      Navigator.of(context).pop(); 
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Guardado localmente. Error al sincronizar: $e'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
   }
 
   @override

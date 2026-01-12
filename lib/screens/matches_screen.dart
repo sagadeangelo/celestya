@@ -1,6 +1,7 @@
 // lib/screens/matches_screen.dart
 import 'package:appinio_swiper/appinio_swiper.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Import for HapticFeedback
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/match_candidate.dart';
 import '../features/matching/presentation/providers/filter_provider.dart';
@@ -173,100 +174,124 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
     // Pantalla de "Sin resultados"
     if (filteredCandidates.isEmpty) {
       return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.background,
         appBar: AppBar(
-          title: const Text('Celestya'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
           leading: IconButton(
              icon: const Icon(Icons.tune_rounded),
              onPressed: () => _showFilters(context),
           ),
         ),
         body: EmptyState(
-          icon: Icons.search_off,
-          title: 'No hay matches con estos filtros',
-          message: 'Intenta ajustar tus preferencias para ver más perfiles compatibles',
-          actionLabel: 'Limpiar filtros',
-          onAction: () => ref.read(filterProvider.notifier).resetFilters(),
+          icon: Icons.hourglass_empty_rounded,
+          title: 'Las conexiones importantes toman tiempo',
+          message: 'El universo está alineando las estrellas.\nMientras tanto, puedes ajustar tus preferencias.',
+          actionLabel: 'Ampliar búsqueda',
+          onAction: () => _showFilters(context),
         ),
       );
     }
 
     return Scaffold(
+      extendBodyBehindAppBar: true, 
       appBar: AppBar(
-        title: const Text('Celestya'),
+        title: const Text('Celestya', style: TextStyle(fontWeight: FontWeight.w300)),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: IconButton(
-           icon: const Icon(Icons.tune_rounded),
+           style: IconButton.styleFrom(backgroundColor: Colors.black12),
+           icon: const Icon(Icons.tune_rounded, color: Colors.white),
            onPressed: () => _showFilters(context),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_outlined),
+            style: IconButton.styleFrom(backgroundColor: Colors.black12),
+            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
             onPressed: () {}, 
           )
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
+          // Background Gradient to ensure consistency
+          Container(
+            decoration: const BoxDecoration(
+               gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.black54, Colors.transparent], 
+                  stops: [0.0, 0.3],
+               ),
+            ),
+          ),
+
+          // Card Stack
+          Positioned.fill(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 40),
-                child: AppinioSwiper(
-                  // Usamos Key para forzar la reconstrucción cuando cambian los filtros
-                  key: ValueKey(filteredCandidates.length + filters.hashCode),
-                  controller: _swiperController,
-                  cardCount: filteredCandidates.length,
-                  onSwipeEnd: _onSwipe,
-                  onEnd: _onEnd,
-                  swipeOptions: const SwipeOptions.only(
-                    left: true,
-                    right: true,
-                    up: false,
-                    down: false,
-                  ),
-                  backgroundCardCount: 2,
-                  cardBuilder: (context, index) {
-                    if (index >= filteredCandidates.length) return const SizedBox();
-                    return PremiumMatchCard(candidate: filteredCandidates[index]);
-                  },
+              padding: const EdgeInsets.only(top: 0), // Full height
+              child: AppinioSwiper(
+                key: ValueKey(filteredCandidates.length + filters.hashCode),
+                controller: _swiperController,
+                cardCount: filteredCandidates.length,
+                onSwipeEnd: (prev, target, activity) {
+                   _onSwipe(prev, target, activity);
+                   // Haptic Feedback Light
+                   HapticFeedback.lightImpact();
+                },
+                onEnd: _onEnd,
+                swipeOptions: const SwipeOptions.only(
+                  left: true,
+                  right: true,
+                  up: false,
+                  down: false,
                 ),
+                backgroundCardCount: 2,
+                cardBuilder: (context, index) {
+                  if (index >= filteredCandidates.length) return const SizedBox();
+                  return PremiumMatchCard(candidate: filteredCandidates[index]);
+                },
               ),
             ),
           ),
           
-          // Botones de acción
-          Padding(
-            padding: const EdgeInsets.fromLTRB(30, 0, 30, 40),
+          // Action Buttons (Floating at bottom)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 40,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.center, // Fixed alignment
               children: [
                 _ActionButton(
-                  icon: Icons.close,
-                  color: Colors.redAccent,
+                  icon: Icons.close_rounded,
+                  color: const Color(0xFFFF4B4B), // Red
                   size: 60,
-                  onPressed: () => _swiperController.swipeLeft(),
-                ),
-                const SizedBox(width: 20),
-                _ActionButton(
-                  icon: Icons.favorite,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 75,
-                  isPrimary: true,
                   onPressed: () {
-                    // Simulación simplificada de Like para el botón
-                    // En lógica real, obtendríamos el item actual del controller
+                    HapticFeedback.selectionClick();
+                    _swiperController.swipeLeft();
+                  },
+                ),
+                
+                // Pulsing Heart Button
+                _PulsingHeartButton(
+                  onPressed: () {
+                    HapticFeedback.mediumImpact();
                     if (filteredCandidates.isNotEmpty) {
                       _handleLike(filteredCandidates[0]); 
                     }
                     _swiperController.swipeRight();
                   },
                 ),
-                const SizedBox(width: 20),
+
                 _ActionButton(
-                  icon: Icons.star,
-                  color: Colors.amber,
+                  icon: Icons.star_rounded,
+                  color: const Color(0xFF62BAF3), // Blue
                   size: 50,
                   onPressed: () {
+                     HapticFeedback.selectionClick();
                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Superlike pronto...")));
                   },
                 ),
@@ -279,21 +304,17 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
   }
 }
 
-
-
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final Color color;
   final double size;
   final VoidCallback onPressed;
-  final bool isPrimary;
 
   const _ActionButton({
     required this.icon,
     required this.color,
     required this.size,
     required this.onPressed,
-    this.isPrimary = false,
   });
 
   @override
@@ -305,22 +326,90 @@ class _ActionButton extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white,
+          color: Colors.white.withOpacity(0.1), // Glass effect
+          border: Border.all(color: Colors.white.withOpacity(0.2)),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(isPrimary ? 0.4 : 0.15),
-              spreadRadius: isPrimary ? 4 : 1,
-              blurRadius: isPrimary ? 12 : 8,
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 10,
               offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Icon(
           icon,
-          color: color,
-          size: size * 0.5,
+          color: color, // Icon color keeps vibrancy
+          size: size * 0.45,
         ),
       ),
+    );
+  }
+}
+
+class _PulsingHeartButton extends StatefulWidget {
+  final VoidCallback onPressed;
+
+  const _PulsingHeartButton({required this.onPressed});
+
+  @override
+  State<_PulsingHeartButton> createState() => _PulsingHeartButtonState();
+}
+
+class _PulsingHeartButtonState extends State<_PulsingHeartButton> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2), // Slow, calm pulse
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final scale = 1.0 + (_controller.value * 0.1); // Subtle breathing (1.0 -> 1.1)
+        return Transform.scale(
+          scale: scale,
+          child: GestureDetector(
+            onTap: widget.onPressed,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFF006E), Color(0xFFFFBE0B)], // Nebula Pink to Gold
+                  begin: Alignment.bottomLeft,
+                  end: Alignment.topRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF006E).withOpacity(0.4),
+                    blurRadius: 20 * scale,
+                    spreadRadius: 2 * scale,
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.favorite_rounded,
+                color: Colors.white,
+                size: 36,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

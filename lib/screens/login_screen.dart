@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_api.dart';
+import '../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -34,8 +35,8 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
     try {
       final token = await AuthApi.login(email, pass);
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('auth_token', token);
+      // Guardar credenciales para persistencia
+      await AuthService.saveCredentials(email, pass, token);
 
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/app');
