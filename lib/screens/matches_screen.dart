@@ -9,6 +9,8 @@ import '../features/matching/presentation/widgets/filter_bottom_sheet.dart';
 import '../widgets/match_orange_overlay.dart';
 import '../widgets/premium_match_card.dart';
 import '../widgets/empty_state.dart';
+import '../theme/app_theme.dart';
+import '../widgets/starry_background.dart';
 
 // Mock user photo URL
 const String kMockUserPhotoUrl = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1887&auto=format&fit=crop';
@@ -84,6 +86,9 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
   
   // Track current card index
   int _currentCardIndex = 0;
+  
+  // Track horizontal delta for overlays
+  double _swipeOffset = 0;
 
   @override
   void dispose() {
@@ -172,23 +177,44 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
     }).toList();
 
     // Pantalla de "Sin resultados"
+    // Pantalla de "Sin resultados" (Empty State Theme)
     if (filteredCandidates.isEmpty) {
       return Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.background,
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-             icon: const Icon(Icons.tune_rounded),
+             icon: const Icon(Icons.tune_rounded, color: Colors.white),
              onPressed: () => _showFilters(context),
           ),
         ),
-        body: EmptyState(
-          icon: Icons.hourglass_empty_rounded,
-          title: 'Las conexiones importantes toman tiempo',
-          message: 'El universo está alineando las estrellas.\nMientras tanto, puedes ajustar tus preferencias.',
-          actionLabel: 'Ampliar búsqueda',
-          onAction: () => _showFilters(context),
+        body: Stack(
+          children: [
+             // 1. Background Gradient
+            Container(
+              decoration: BoxDecoration( // Removed const
+                gradient: CelestyaColors.softSpaceGradient,
+              ),
+            ),
+            // 2. Calming Starry Sky
+            Positioned.fill( // Removed const
+              child: StarryBackground(
+                numberOfStars: 100, // Gentle amount
+                baseColor: Color(0xFFE0E0E0),
+              ),
+            ),
+            // 3. Content
+            Center(
+              child: EmptyState(
+                icon: Icons.hourglass_empty_rounded,
+                title: 'Las conexiones importantes toman tiempo',
+                message: 'El universo está alineando las estrellas.\nMientras tanto, puedes ajustar tus preferencias.',
+                actionLabel: 'Ampliar búsqueda',
+                onAction: () => _showFilters(context),
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -239,6 +265,9 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                    _onSwipe(prev, target, activity);
                    // Haptic Feedback Light
                    HapticFeedback.lightImpact();
+                   setState(() {
+                     _swipeOffset = 0;
+                   });
                 },
                 onEnd: _onEnd,
                 swipeOptions: const SwipeOptions.only(
@@ -248,9 +277,68 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                   down: false,
                 ),
                 backgroundCardCount: 2,
+                onCardPositionChanged: (position) {
+                  setState(() {
+                    _swipeOffset = position.offset.dx;
+                  });
+                },
+                onSwipeCancelled: (activity) {
+                  setState(() => _swipeOffset = 0);
+                },
                 cardBuilder: (context, index) {
                   if (index >= filteredCandidates.length) return const SizedBox();
-                  return PremiumMatchCard(candidate: filteredCandidates[index]);
+                  
+                  final card = PremiumMatchCard(candidate: filteredCandidates[index]);
+                  
+                  // Solo mostrar overlay en la tarjeta que se está moviendo (la de arriba)
+                  final bool isTopCard = index == (filteredCandidates.length - 1 - _currentCardIndex);
+                  // En AppinioSwiper, el index del cardBuilder suele ser el índice de la lista.
+                  // Pero como queremos el overlay solo en el que se mueve, y el swiper suele renderizar 
+                  // los que están visibles, asumiremos que si index == 0 (el primero que se construye para el stack activo)
+                  
+                  // Para mayor seguridad en AppinioSwiper v2, el top card suele ser el índice 0 si se usa cardBuilder simple,
+                  // pero vamos a probar con index == 0.
+                  
+                  final double opacity = (_swipeOffset.abs() / 150).clamp(0.0, 0.8);
+                  final bool isRight = _swipeOffset > 10;
+                  final bool isLeft = _swipeOffset < -10;
+
+                  return Stack(
+                    children: [
+                      card,
+                      if ((isRight || isLeft) && index == 0) // Overlay solo en el actual
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: Opacity(
+                              opacity: opacity,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(28),
+                                  color: isRight 
+                                      ? Colors.green.withOpacity(0.3) 
+                                      : Colors.red.withOpacity(0.3),
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    isRight 
+                                        ? Icons.check_circle_outline_rounded 
+                                        : Icons.cancel_outlined,
+                                    size: 100, // Slightly smaller to be more elegant
+                                    color: Colors.white,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black.withOpacity(0.4),
+                                        blurRadius: 15,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
                 },
               ),
             ),

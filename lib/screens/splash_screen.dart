@@ -13,10 +13,13 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _controller;
+  late AnimationController _rotationController;
+  late AnimationController _pulseController; // New for continuous breathing
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
+  late Animation<double> _pulseAnimation; // New pulse animation
 
   @override
   void initState() {
@@ -27,6 +30,22 @@ class _SplashScreenState extends State<SplashScreen>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
+    );
+
+    // Eclipse Light Rotation
+    _rotationController = AnimationController(
+       vsync: this,
+       duration: const Duration(seconds: 3),
+    )..repeat();
+
+    // Subtle Continuous Pulse (Breathing)
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.04).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
     // Breathing effect - animación de escala suave
@@ -85,6 +104,8 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void dispose() {
     _controller.dispose();
+    _rotationController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -131,25 +152,58 @@ class _SplashScreenState extends State<SplashScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo con sombra suave
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF9B5CFF).withOpacity(0.3),
-                        blurRadius: 40,
-                        spreadRadius: 10,
+                // Logo con Luz Circundante
+                ScaleTransition(
+                  scale: _pulseAnimation,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                    // 1. Luz Circundante (Eclipse Ring)
+                    RotationTransition(
+                      turns: _rotationController,
+                      child: Container(
+                        width: 208, // Thinner ring (208 vs 200 logo = 4px visible border)
+                        height: 208,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: SweepGradient(
+                            colors: [
+                              Colors.transparent,
+                              const Color(0xFFC0C0C0).withOpacity(0.0), // Silver start
+                              const Color(0xFFE0E0E0), // Bright Silver head
+                              Colors.white, // Core of the light (Luminosity)
+                              const Color(0xFFE0E0E0), // Silver tail
+                              const Color(0xFFC0C0C0).withOpacity(0.0),
+                              Colors.transparent,
+                            ],
+                            stops: const [0.0, 0.7, 0.85, 0.9, 0.95, 1.0, 1.0],
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                  child: Image.asset(
-                    'assets/app_icon.png',
-                    width: 200,
-                    height: 200,
-                    fit: BoxFit.contain,
-                  ),
+                    ),
+                    
+                    // 2. Logo Central
+                    Container(
+                      width: 200,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF9B5CFF).withOpacity(0.3),
+                            blurRadius: 40,
+                            spreadRadius: 10,
+                          ),
+                        ],
+                      ),
+                      child: Image.asset(
+                        'assets/app_icon.png',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
                 const SizedBox(height: 32),
                 // Nombre con gradiente
                 const Text(

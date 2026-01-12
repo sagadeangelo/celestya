@@ -2,6 +2,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../data/match_candidate.dart';
+import '../screens/match_detail_screen.dart';
 
 class PremiumMatchCard extends StatefulWidget {
   final MatchCandidate candidate;
@@ -94,27 +95,45 @@ class _PremiumMatchCardState extends State<PremiumMatchCard> {
                   if (imgProvider == null) return const SizedBox();
                   
                   // Envolver en GestureDetector si no es Preview para permitir cambio por Taps
-                  // Si ES preview, PageView ya maneja el swipe, pero quizás queramos taps también.
+                  // Si ES preview, PageView ya maneja el swipe.
                   return GestureDetector(
                     onTapUp: (details) {
                       final width = MediaQuery.of(context).size.width;
-                      // Zona izquierda cambia a anterior, derecha a siguiente
-                      if (details.localPosition.dx < width / 2) {
+                      final dx = details.localPosition.dx;
+                      
+                      // Zonas de Tap:
+                      // 0% - 25%: Foto Anterior
+                      // 75% - 100%: Siguiente Foto
+                      // 25% - 75%: Ver Detalles (Centro)
+                      
+                      if (dx < width * 0.25) {
+                         // Izquierda: Foto anterior
                         _pageController.previousPage(
                           duration: const Duration(milliseconds: 250), 
                           curve: Curves.easeInOut
                         );
-                      } else {
+                      } else if (dx > width * 0.75) {
+                        // Derecha: Siguiente foto
                         _pageController.nextPage(
                           duration: const Duration(milliseconds: 250),
                           curve: Curves.easeInOut
                         );
+                      } else {
+                        // Centro: Ver Perfil Completo
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => MatchDetailScreen(candidate: candidate),
+                          ),
+                        );
                       }
                     },
-                    child: Image(
-                      image: imgProvider,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade300),
+                    child: Hero(
+                       tag: 'match_photo_${candidate.id}', // Hero tag linking to detail screen
+                       child: Image(
+                        image: imgProvider,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade300),
+                      ),
                     ),
                   );
                 },
@@ -127,7 +146,7 @@ class _PremiumMatchCardState extends State<PremiumMatchCard> {
                 ),
               ),
             
-            // Indicadores de fotos
+            // 2. Foto Indicators (keeping these at top)
             if (hasMultiplePhotos)
               Positioned(
                 top: 16,
@@ -148,99 +167,6 @@ class _PremiumMatchCardState extends State<PremiumMatchCard> {
                       ),
                     );
                   }),
-                ),
-              ),
-
-            // 2. Barra de Compatibilidad (Superior) + Badge
-            if (candidate.compatibility > 0)
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0.0, end: candidate.compatibility),
-                      duration: const Duration(milliseconds: 1500),
-                      curve: Curves.easeOutQuart,
-                      builder: (context, value, _) {
-                        // Calcular color según progreso
-                        final Color barColor = value < 0.5
-                            ? Color.lerp(Colors.red, Colors.yellow, value * 2) ?? Colors.orange
-                            : Color.lerp(Colors.yellow, Colors.greenAccent, (value - 0.5) * 2) ?? Colors.green;
-
-                        final percent = (candidate.compatibility * 100).toInt();
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.end, // Alinear badge a la derecha
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Barra de progreso
-                            Stack(
-                              children: [
-                                Container(height: 8, color: Colors.white.withOpacity(0.2)),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Container(
-                                    height: 8,
-                                    width: constraints.maxWidth * value,
-                                    decoration: BoxDecoration(
-                                      color: barColor,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: barColor.withOpacity(0.6),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            
-                            // Badge Explícito "XX% Compatible"
-                            // Solo mostrar badge si la animación ha avanzado algo para no mostrar 0% de golpe
-                             Padding(
-                                padding: const EdgeInsets.only(top: 8, right: 12),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.7),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: barColor.withOpacity(0.8), width: 1.5),
-                                    boxShadow: [
-                                      BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 4),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        // Icono dinámico
-                                       candidate.compatibility > 0.8 ? Icons.favorite : 
-                                       candidate.compatibility > 0.5 ? Icons.local_fire_department : Icons.bolt,
-                                        color: barColor, 
-                                        size: 14
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        '$percent% Compatible',
-                                        style: theme.textTheme.labelSmall?.copyWith(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                          ],
-                        );
-                      },
-                    );
-                  },
                 ),
               ),
 
@@ -372,6 +298,99 @@ class _PremiumMatchCardState extends State<PremiumMatchCard> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
+
+                    // Compatibility Bar (Bottom Relocated)
+                    if (candidate.compatibility > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 42), // Increased from 32 to lower it more
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'COMPATIBILIDAD',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: Colors.white70,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                                TweenAnimationBuilder<double>(
+                                  tween: Tween(begin: 0.0, end: candidate.compatibility),
+                                  duration: const Duration(milliseconds: 1500),
+                                  curve: Curves.easeOutQuart,
+                                  builder: (context, value, _) {
+                                    final percent = (value * 100).toInt();
+                                    final Color barColor = value < 0.5
+                                        ? Color.lerp(Colors.red, Colors.yellow, value * 2) ?? Colors.orange
+                                        : Color.lerp(Colors.yellow, Colors.greenAccent, (value - 0.5) * 2) ?? Colors.green;
+                                    
+                                    return Text(
+                                      '$percent%',
+                                      style: theme.textTheme.labelSmall?.copyWith(
+                                        color: barColor,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10), // Increased from 6
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                return TweenAnimationBuilder<double>(
+                                  tween: Tween(begin: 0.0, end: candidate.compatibility),
+                                  duration: const Duration(milliseconds: 1500),
+                                  curve: Curves.easeOutQuart,
+                                  builder: (context, value, _) {
+                                    final Color barColor = value < 0.5
+                                        ? Color.lerp(Colors.red, Colors.yellow, value * 2) ?? Colors.orange
+                                        : Color.lerp(Colors.yellow, Colors.greenAccent, (value - 0.5) * 2) ?? Colors.green;
+                                    
+                                    return Stack(
+                                      children: [
+                                        // Background track
+                                        Container(
+                                          height: 14, // Adjusted to 14px
+                                          width: double.infinity,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                        // Glowing Bar
+                                        Container(
+                                          height: 14, // Adjusted to 14px
+                                          width: constraints.maxWidth * value,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(8),
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                barColor.withOpacity(0.7),
+                                                barColor,
+                                              ],
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: barColor.withOpacity(0.5),
+                                                blurRadius: 12,
+                                                spreadRadius: 2,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),

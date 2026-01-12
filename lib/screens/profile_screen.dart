@@ -10,6 +10,7 @@ import 'profile_edit_screen.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
 import '../theme/app_theme.dart'; // Import CelestyaColors
+import '../widgets/starry_background.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -122,12 +123,32 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: CelestyaColors.softSpaceGradient, 
-        ),
-        child: SafeArea(
-          child: profileAsync.when(
+      body: Stack(
+        children: [
+          // 1. Background Gradient
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: CelestyaColors.softSpaceGradient, 
+              ),
+            ),
+          ),
+          
+          // 2. Starry Background (Animated with Shooting Stars)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 600, // Covers header down to gallery start
+            child: StarryBackground(
+                numberOfStars: 150,
+                baseColor: Color(0xFFE0E0E0),
+            ),
+          ),
+
+          // 3. Main Content
+          SafeArea(
+            child: profileAsync.when(
             // Loading state
             loading: () => const Center(
               child: CircularProgressIndicator(color: Colors.white),
@@ -259,8 +280,9 @@ class ProfileScreen extends ConsumerWidget {
           },
         ),
       ),
-     ), // Close Container
-    ); // Close Scaffold
+     ],
+    ),
+   );
   }
 
   // --- Celestial Profile Components ---
