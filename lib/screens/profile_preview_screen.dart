@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/match_candidate.dart';
 import '../data/user_profile.dart';
 import '../widgets/premium_match_card.dart';
+import '../theme/app_theme.dart';
 
 class ProfilePreviewScreen extends StatelessWidget {
   final UserProfile profile;
@@ -23,13 +24,20 @@ class ProfilePreviewScreen extends StatelessWidget {
       height: profile.heightCm?.toDouble() ?? 0,
       exercise: '', // No mapped in UserProfile properly yet, defaulting
       interests: profile.interests,
+      compatibility: 0.0, // Hidden for own profile preview
+      voiceIntroPath: profile.voiceIntroPath,
+      bodyType: profile.bodyType,
     );
 
     return Scaffold(
-      backgroundColor: Colors.black, // Fondo negro para resaltar la tarjeta
-      body: SafeArea(
-        child: Stack(
-          children: [
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: CelestyaColors.vibrantCelestialGradient,
+        ),
+        child: SafeArea(
+          child: Stack(
+            children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
               child: PremiumMatchCard(
@@ -81,6 +89,7 @@ class ProfilePreviewScreen extends StatelessWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

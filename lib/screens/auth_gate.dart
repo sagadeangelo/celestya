@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/sync_service.dart';
 import 'login_screen.dart';
 
 class AuthGate extends StatefulWidget {
@@ -25,6 +26,9 @@ class _AuthGateState extends State<AuthGate> {
     
     if (mounted) {
       if (success) {
+        // Disparar sincronización inteligente (Prompt 5)
+        SyncService.triggerSync();
+        
         // Si el login es exitoso, navegar a la app principal
         Navigator.pushReplacementNamed(context, '/app');
       } else {

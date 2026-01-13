@@ -1,55 +1,61 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import 'api_client.dart';
 import 'auth_service.dart';
 
 class QuizApi {
-  /// Envía las respuestas del cuestionario al servidor.
-  /// 
-  /// Se asume que el backend espera un POST a `/users/me/quiz`
-  /// con un body JSON: `{ "answers": { "q1": ["a1"], ... } }`
+  static final Dio _dio = Dio(BaseOptions(
+    baseUrl: ApiClient.API_BASE,
+    connectTimeout: const Duration(seconds: 5),
+    receiveTimeout: const Duration(seconds: 3),
+  ));
+
+  /// Envía las respuestas del cuestionario al servidor usando Dio.
   static Future<void> saveQuizAnswers(Map<String, dynamic> answers) async {
     final token = await AuthService.getToken();
     if (token == null) {
       throw Exception('No hay sesión activa para guardar el cuestionario');
     }
 
-    final url = Uri.parse('${ApiClient.API_BASE}/users/me/quiz');
-    
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        "answers": answers
-      }),
-    );
+    try {
+      final response = await _dio.post(
+        '/users/me/quiz-answers', // Updated endpoint as per request
+        data: {
+          "answers": answers
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
 
-    if (response.statusCode != 200 && response.statusCode != 201) {
-      throw Exception('Error al guardar respuestas: ${response.statusCode} ${response.body}');
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw Exception('Error: ${response.statusCode} ${response.data}');
+      }
+    } on DioException catch (e) {
+      throw Exception('Error de red: ${e.message}');
     }
   }
 
-  /// Recupera las respuestas guardadas (si se requiere en el futuro)
+  /// Recupera las respuestas guardadas
   static Future<Map<String, dynamic>?> getQuizAnswers() async {
     final token = await AuthService.getToken();
     if (token == null) return null;
 
-    final url = Uri.parse('${ApiClient.API_BASE}/users/me/quiz');
-    
-    final response = await http.get(
-      url,
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
-    );
+    try {
+      final response = await _dio.get(
+        '/users/me/quiz-answers',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
 
-    if (response.statusCode == 200) {
-      final json = jsonDecode(response.body);
-      return json['answers'];
-    }
+      if (response.statusCode == 200) {
+        return response.data['answers'];
+      }
+    } catch (_) {}
     return null;
   }
 }

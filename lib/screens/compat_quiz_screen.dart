@@ -2,8 +2,15 @@
 import 'package:flutter/material.dart';
 
 import '../data/compat_questions.dart';
-import 'package:Celestya/services/compat_storage.dart';
-import 'package:Celestya/services/quiz_api.dart'; // Importar QuizApi
+import 'package:Celestya/services/compat_storage.dart'; // Mantener por compatibilidad legacy
+import 'package:Celestya/services/quiz_api.dart';
+import 'package:Celestya/services/speech_service.dart';
+import 'package:Celestya/services/quiz_local_storage.dart';
+import 'package:Celestya/models/quiz_attempt.dart';
+import 'package:Celestya/widgets/voice_answer_field.dart';
+import 'package:hive/hive.dart';
+import 'package:uuid/uuid.dart';
+import 'package:workmanager/workmanager.dart';
 
 class CompatQuizScreen extends StatefulWidget {
   const CompatQuizScreen({super.key});
@@ -14,9 +21,31 @@ class CompatQuizScreen extends StatefulWidget {
 
 class _CompatQuizScreenState extends State<CompatQuizScreen> {
   int _currentIndex = 0;
+  bool _isListening = false;
+  String _lastWords = '';
 
   /// Mapa: idPregunta -> conjunto de ids de opciones seleccionadas.
   final Map<String, Set<String>> _answers = {};
+
+  @override
+  void initState() {
+    super.initState();
+    SpeechService.init();
+    _resumeProgress();
+  }
+
+  Future<void> _resumeProgress() async {
+    final saved = await QuizLocalStorage.loadAnswers();
+    if (saved.isNotEmpty) {
+      setState(() {
+        _answers.addAll(saved.map((k, v) => MapEntry(k, v.toSet())));
+        // Opcional: Saltar a la última pregunta respondida
+        _currentIndex = (_answers.length < compatQuestions.length) 
+            ? _answers.length 
+            : compatQuestions.length - 1;
+      });
+    }
+  }
 
   CompatQuestion get _currentQuestion => compatQuestions[_currentIndex];
 
@@ -39,9 +68,11 @@ class _CompatQuizScreenState extends State<CompatQuizScreen> {
         }
         _answers[q.id] = current;
       } else {
-        // Single-select: reemplazamos el set completo.
         _answers[q.id] = {opt.id};
       }
+      
+      // Guardado INMEDIATO tras cada cambio
+      QuizLocalStorage.saveAnswer(q.id, _answers[q.id]!.toList());
     });
   }
 
@@ -58,6 +89,9 @@ class _CompatQuizScreenState extends State<CompatQuizScreen> {
     } else {
       _finishQuiz();
     }
+    setState(() {
+      _lastWords = '';
+    });
   }
 
   void _goBack() {
@@ -68,50 +102,100 @@ class _CompatQuizScreenState extends State<CompatQuizScreen> {
     }
   }
 
+  void _listen() async {
+    if (!_isListening) {
+      bool available = await SpeechService.init();
+      if (available) {
+        setState(() => _isListening = true);
+        SpeechService.startListening(
+          onResult: (val) {
+            setState(() {
+              _lastWords = val;
+              _tryAutoMatch(val);
+            });
+          },
+        );
+      }
+    } else {
+      setState(() => _isListening = false);
+      SpeechService.stopListening();
+    }
+  }
+
+  void _tryAutoMatch(String text) {
+    if (text.isEmpty) return;
+    final normalized = text.toLowerCase().trim();
+    for (var opt in _currentQuestion.options) {
+      if (normalized.contains(opt.label.toLowerCase()) || 
+          opt.label.toLowerCase().contains(normalized)) {
+        _toggleOption(_currentQuestion, opt);
+        break; 
+      }
+    }
+  }
+
   Future<void> _finishQuiz() async {
-    // 1. Loading
+    // 1. Mostrar Loading
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => const Center(child: CircularProgressIndicator()),
     );
 
-    // Convertimos Set<String> -> List<String> para poder guardar como JSON.
-    final Map<String, dynamic> toSave = _answers.map(
+    // Convertimos Set<String> -> List<String> para persistencia
+    final Map<String, dynamic> toSaveAnswers = _answers.map(
       (key, value) => MapEntry(key, value.toList()),
     );
 
-    // 2. Guardar Localmente (Respaldo)
-    await CompatStorage.saveAnswers(toSave);
+    // 2. Persistencia Local Robusta con Hive (Cola de Sincronización)
+    final box = Hive.box<QuizAttempt>('quiz_attempts');
+    final attempt = QuizAttempt(
+      id: const Uuid().v4(),
+      answers: toSaveAnswers,
+      timestamp: DateTime.now(),
+      status: 'pending',
+    );
+    await box.add(attempt);
+
+    // Guardar también en el almacenamiento legacy para no romper lógica actual de UI de perfil
+    await CompatStorage.saveAnswers(toSaveAnswers);
 
     try {
-      // 3. Guardar en Backend
-      await QuizApi.saveQuizAnswers(toSave);
+      // 3. Intento de subida inmediata a Backend
+      await QuizApi.saveQuizAnswers(toSaveAnswers);
       
+      attempt.status = 'synced';
+      await attempt.save();
+
+      // 4. Limpiar almacenamiento local inmediato al finalizar con éxito
+      await QuizLocalStorage.clearAnswers();
+
       if (!mounted) return;
       Navigator.of(context).pop(); // Cerrar dialog loading
       Navigator.of(context).pop(); // Cerrar pantalla quiz
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            '¡Respuestas guardadas exitosamente en tu perfil! ✨',
-          ),
+          content: Text('¡Cuestionario sincronizado con el universo! ✨🚀'),
           backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context).pop(); // Cerrar dialog loading
+      
+      // Si falla, ya está guardado en Hive, el SyncService (Workmanager) lo intentará después
+      Workmanager().registerOneOffTask(
+        "sync-quiz-task",
+        "sync-quiz-task",
+        initialDelay: const Duration(minutes: 5),
+      );
 
-      // Si falla API, al menos se guardó local. Avisamos al usuario pero cerramos.
-      // Opcional: Podríamos NO cerrar y dejar reintentar. 
-      // Por ahora cerramos para no bloquear, asumiendo "offline first"
-      Navigator.of(context).pop(); 
-
+      Navigator.of(context).pop(); // Cerramos pantalla
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Guardado localmente. Error al sincronizar: $e'),
+          content: Text('Guardado localmente. Se sincronizará automáticamente pronto. (Error: $e)'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -185,7 +269,18 @@ class _CompatQuizScreenState extends State<CompatQuizScreen> {
                           height: 1.3,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 16),
+                      VoiceAnswerField(
+                        label: 'Tu respuesta por voz',
+                        initialValue: _lastWords,
+                        onChanged: (val) {
+                          setState(() {
+                            _lastWords = val;
+                            _tryAutoMatch(val);
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 24),
                       if (q.multi)
                         Container(
                           padding: const EdgeInsets.symmetric(

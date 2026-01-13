@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../data/match_candidate.dart';
 import '../theme/app_theme.dart';
+import '../widgets/match_voice_player.dart';
 
 class MatchDetailScreen extends StatelessWidget {
   final MatchCandidate candidate;
@@ -10,7 +12,7 @@ class MatchDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: CelestyaColors.deepNight,
+      backgroundColor: CelestyaColors.cosmicCream,
       body: CustomScrollView(
         slivers: [
           // 1. Expanded Photo AppBar
@@ -33,11 +35,17 @@ class MatchDetailScreen extends StatelessWidget {
             flexibleSpace: FlexibleSpaceBar(
               background: Hero(
                 tag: 'match_photo_${candidate.id}',
-                child: Image.network(
-                  candidate.photoUrl ?? '',
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(color: Colors.grey[900]),
-                ),
+                child: candidate.photoUrl != null && candidate.photoUrl!.startsWith('http')
+                    ? Image.network(
+                        candidate.photoUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: Colors.grey[900]),
+                      )
+                    : Image.file(
+                        File(candidate.photoUrl ?? ''),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: Colors.grey[900]),
+                      ),
               ),
             ),
           ),
@@ -46,10 +54,10 @@ class MatchDetailScreen extends StatelessWidget {
           SliverToBoxAdapter(
             child: Container(
               padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                color: CelestyaColors.deepNight,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-                gradient: CelestyaColors.softSpaceGradient, 
+              decoration: BoxDecoration(
+                color: CelestyaColors.cosmicCream,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                gradient: CelestyaColors.softCreamGradient, 
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,10 +68,10 @@ class MatchDetailScreen extends StatelessWidget {
                        Expanded(
                          child: Text(
                            '${candidate.name}, ${candidate.age}',
-                           style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                             color: Colors.white,
-                             fontWeight: FontWeight.bold,
-                           ),
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                              color: CelestyaColors.textPrimaryLight,
+                              fontWeight: FontWeight.bold,
+                            ),
                          ),
                        ),
                        // Compatibility Badge
@@ -84,10 +92,10 @@ class MatchDetailScreen extends StatelessWidget {
                              const SizedBox(width: 4),
                              Text(
                                '${(candidate.compatibility * 100).toInt()}%',
-                               style: const TextStyle(
-                                 color: Colors.white, 
-                                 fontWeight: FontWeight.bold
-                               ),
+                                style: const TextStyle(
+                                  color: CelestyaColors.textPrimaryLight, 
+                                  fontWeight: FontWeight.bold
+                                ),
                              ),
                            ],
                          ),
@@ -97,21 +105,31 @@ class MatchDetailScreen extends StatelessWidget {
                    const SizedBox(height: 8),
                    
                    // Location
-                   Row(
-                     children: [
-                       const Icon(Icons.location_on_outlined, color: Colors.white70, size: 18),
-                       const SizedBox(width: 8),
-                       Text(
-                         candidate.city,
-                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                           color: Colors.white70,
-                         ),
-                       ),
-                     ],
-                   ),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_outlined, color: CelestyaColors.textSecondaryLight, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            candidate.city,
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: CelestyaColors.textSecondaryLight,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                    
                    const SizedBox(height: 24),
-                   const Divider(color: Colors.white10),
+                   
+                   if (candidate.voiceIntroPath != null) ...[
+                     MatchVoicePlayer(audioPath: candidate.voiceIntroPath!),
+                     const SizedBox(height: 24),
+                   ],
+
+                   const Divider(color: Colors.black12),
                    const SizedBox(height: 24),
 
                    // Bio
@@ -126,7 +144,7 @@ class MatchDetailScreen extends StatelessWidget {
                    Text(
                      candidate.bio ?? 'Sin descripción.',
                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                       color: Colors.white.withOpacity(0.9),
+                       color: CelestyaColors.textPrimaryLight.withOpacity(0.9),
                        height: 1.5,
                      ),
                    ),
@@ -150,7 +168,7 @@ class MatchDetailScreen extends StatelessWidget {
                          Chip(
                            label: Text(interest),
                            backgroundColor: CelestyaColors.mysticalPurple.withOpacity(0.3),
-                           labelStyle: const TextStyle(color: Colors.white),
+                            labelStyle: const TextStyle(color: CelestyaColors.textPrimaryLight),
                            side: BorderSide.none,
                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                          )
@@ -171,7 +189,6 @@ class MatchDetailScreen extends StatelessWidget {
           ),
         ],
       ),
-      // Floating Action Buttons (Dislike / Like) could go here too if desired
     );
   }
 
@@ -186,21 +203,25 @@ class MatchDetailScreen extends StatelessWidget {
               color: Colors.white.withOpacity(0.05),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: Colors.white70, size: 20),
+            child: Icon(icon, color: CelestyaColors.mysticalPurple, size: 20),
           ),
           const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
-              ),
-              Text(
-                value,
-                style: const TextStyle(color: Colors.white, fontSize: 16),
-              ),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(color: CelestyaColors.textSecondaryLight, fontSize: 12),
+                ),
+                Text(
+                  value,
+                  style: const TextStyle(color: CelestyaColors.textPrimaryLight, fontSize: 16),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),

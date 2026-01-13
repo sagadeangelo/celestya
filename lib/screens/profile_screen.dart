@@ -11,6 +11,7 @@ import '../services/auth_service.dart';
 import 'login_screen.dart';
 import '../theme/app_theme.dart'; // Import CelestyaColors
 import '../widgets/starry_background.dart';
+import '../widgets/voice_intro_widget.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -114,7 +115,7 @@ class ProfileScreen extends ConsumerWidget {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.edit),
+            icon: const Icon(Icons.edit, color: Colors.white),
             onPressed: () {
               final profile = profileAsync.valueOrNull;
               _openEditProfile(context, ref, profile);
@@ -128,8 +129,8 @@ class ProfileScreen extends ConsumerWidget {
           // 1. Background Gradient
           Positioned.fill(
             child: Container(
-              decoration: const BoxDecoration(
-                gradient: CelestyaColors.softSpaceGradient, 
+              decoration: BoxDecoration(
+                gradient: CelestyaColors.vibrantCelestialGradient, 
               ),
             ),
           ),
@@ -208,7 +209,7 @@ class ProfileScreen extends ConsumerWidget {
 
                   // Voice Intro (NEW)
                   if (hasProfile) ...[
-                    _buildVoiceIntroSection(context),
+                    VoiceIntroWidget(profile: profile, ref: ref),
                     const SizedBox(height: 24),
                   ],
 
@@ -291,9 +292,20 @@ class ProfileScreen extends ConsumerWidget {
     return Column(
       children: [
         // Profile Photo with Ring
-        Stack(
-          alignment: Alignment.bottomRight,
-          children: [
+        GestureDetector(
+          onTap: () {
+            if (hasProfile) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  fullscreenDialog: true,
+                  builder: (_) => ProfilePreviewScreen(profile: profile),
+                ),
+              );
+            }
+          },
+          child: Stack(
+            alignment: Alignment.bottomRight,
+            children: [
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
@@ -354,20 +366,25 @@ class ProfileScreen extends ConsumerWidget {
             )
           ],
         ),
+      ),
         const SizedBox(height: 16),
         
         // Name & Trust Badge
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              hasProfile
-                  ? '${profile.name}${profile.age != null ? ', ${profile.age}' : ''}'
-                  : 'Completa tu perfil',
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            Flexible(
+              child: Text(
+                hasProfile
+                    ? '${profile.name}${profile.age != null ? ', ${profile.age}' : ''}'
+                    : 'Completa tu perfil',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(width: 8),
@@ -490,89 +507,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildVoiceIntroSection(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            CelestyaColors.mysticalPurple.withOpacity(0.2),
-            CelestyaColors.deepNight,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: CelestyaColors.mysticalPurple.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.mic_rounded, color: CelestyaColors.starDust),
-              SizedBox(width: 8),
-              Text(
-                'Preséntate con tu voz',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Graba 10-15 segundos. La voz comunica lo que el texto no puede.',
-            style: TextStyle(color: Colors.white54, fontSize: 13),
-          ),
-          const SizedBox(height: 20),
-          
-          // Player Placeholder
-          Row(
-            children: [
-              // Play/Record Button
-              Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  color: CelestyaColors.mysticalPurple,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.mic, color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 12),
-              // Waveform
-              Expanded(
-                child: SizedBox(
-                  height: 30,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(20, (index) {
-                      return Container(
-                        width: 3,
-                        height: 10 + (index % 5) * 4.0,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                '00:00',
-                style: TextStyle(color: Colors.white54, fontSize: 12),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+
 
   // --- End Celestial Components ---
 
@@ -599,20 +534,20 @@ class ProfileScreen extends ConsumerWidget {
                const SizedBox(width: 8),
                const Text(
                  'Cuestionario de compatibilidad',
-                 style: TextStyle(
-                   color: Colors.white,
-                   fontWeight: FontWeight.bold,
-                   fontSize: 16,
-                 ),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
              quizCompleted
-                  ? 'Ya completaste tu cuestionario.'
-                  : 'Aún no has contestado tu cuestionario. Te haremos 12 preguntas para conocer mejor tus preferencias.',
-             style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13),
+                   ? 'Ya completaste tu cuestionario.'
+                   : 'Aún no has contestado tu cuestionario. Te haremos 12 preguntas para conocer mejor tus preferencias.',
+              style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13),
           ),
           const SizedBox(height: 16),
            // Neon Cream Button
@@ -622,7 +557,7 @@ class ProfileScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(30),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFFFF8E7).withOpacity(0.4), // Cosmic Cream glow
+                    color: CelestyaColors.mysticalPurple.withOpacity(0.4), // Cosmic Cream glow
                     blurRadius: 15, 
                     spreadRadius: 1,
                   ),
@@ -632,7 +567,7 @@ class ProfileScreen extends ConsumerWidget {
                onPressed: () => _openQuiz(context, ref),
                style: OutlinedButton.styleFrom(
                  foregroundColor: const Color(0xFFFFF8E7), // Cosmic Cream
-                 side: const BorderSide(color: Color(0xFFFFF8E7), width: 1.5),
+                side: const BorderSide(color: Color(0xFFFFF8E7), width: 1.5),
                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                  backgroundColor: Colors.transparent,
                  padding: const EdgeInsets.symmetric(vertical: 16),

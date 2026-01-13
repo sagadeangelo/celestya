@@ -249,14 +249,14 @@ class _PremiumMatchCardState extends State<PremiumMatchCard> {
                     // Altura
                     if (candidate.height > 0)
                       Padding(
-                        padding: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.only(top: 2),
                         child: Row(
                           children: [
-                            const Icon(Icons.height, color: Colors.white70, size: 16),
+                            const Icon(Icons.height, color: Colors.white70, size: 14),
                             const SizedBox(width: 4),
                              Text(
                               '${candidate.height.round()} cm',
-                              style: theme.textTheme.bodyMedium?.copyWith(
+                              style: theme.textTheme.bodySmall?.copyWith(
                                 color: Colors.white70,
                               ),
                             ),
@@ -287,12 +287,12 @@ class _PremiumMatchCardState extends State<PremiumMatchCard> {
                       ),
 
                     if (candidate.bio != null) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       Text(
                         candidate.bio!,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: Colors.white.withOpacity(0.85),
-                          fontSize: 14,
+                          fontSize: 13,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -302,7 +302,7 @@ class _PremiumMatchCardState extends State<PremiumMatchCard> {
                     // Compatibility Bar (Bottom Relocated)
                     if (candidate.compatibility > 0)
                       Padding(
-                        padding: const EdgeInsets.only(top: 42), // Increased from 32 to lower it more
+                        padding: const EdgeInsets.only(top: 20), // Reduced from 42 to avoid overflow
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

@@ -19,6 +19,8 @@ class CelestyaColors {
   
   static const morningMist = Color(0xFFF4F6F8); // Niebla matutina (fondo light)
   static const cloudWhite = Color(0xFFFFFFFF); // Nubes blancas (cards light)
+  static const cosmicCream = Color(0xFFFFFDF5); // Crema aún más sutil
+  static const softSand = Color(0xFFFEF9EB);    // Arena muy pálida
 
   // Accents (The Glow)
   static const nebulaPink = Color(0xFFFF006E); // Pasión, energía (likes)
@@ -53,7 +55,24 @@ class CelestyaColors {
   
   // Nuevo gradiente más suave para el perfil (Más luz, menos negro)
   static const LinearGradient softSpaceGradient = LinearGradient(
-    colors: [Color(0xFF4A3080), Color(0xFF1F1B3E)], // Medium Purple -> Dark Cosmic Purple
+    colors: const [Color(0xFF4A3080), Color(0xFF1F1B3E)], // Medium Purple -> Dark Cosmic Purple
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+
+  static const LinearGradient vibrantCelestialGradient = LinearGradient(
+    colors: const [
+      Color(0xFF2E1065), // Indigo Profundo
+      Color(0xFF7B2CBF), // Mystical Purple
+      Color(0xFF030308), // Space Black
+    ],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    stops: const [0.0, 0.5, 1.0],
+  );
+
+  static const LinearGradient softCreamGradient = LinearGradient(
+    colors: [cosmicCream, softSand],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );

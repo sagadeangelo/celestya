@@ -100,6 +100,7 @@ class UserProfile {
   // Photos
   final String? profilePhotoUrl;
   final List<String> photoUrls;
+  final String? voiceIntroPath;
 
   const UserProfile({
     this.name,
@@ -121,6 +122,7 @@ class UserProfile {
     this.interests = const [],
     this.profilePhotoUrl,
     this.photoUrls = const [],
+    this.voiceIntroPath,
   });
 
   /// Create an empty profile
@@ -187,6 +189,7 @@ class UserProfile {
       'interests': interests,
       'profilePhotoUrl': profilePhotoUrl,
       'photoUrls': photoUrls,
+      'voiceIntroPath': voiceIntroPath,
     };
   }
 
@@ -224,6 +227,7 @@ class UserProfile {
               ?.map((e) => e as String)
               .toList() ??
           const [],
+      voiceIntroPath: json['voiceIntroPath'] as String?,
     );
   }
 
@@ -248,6 +252,7 @@ class UserProfile {
     List<String>? interests,
     String? profilePhotoUrl,
     List<String>? photoUrls,
+    String? voiceIntroPath,
   }) {
     return UserProfile(
       name: name ?? this.name,
@@ -269,6 +274,7 @@ class UserProfile {
       interests: interests ?? this.interests,
       profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
       photoUrls: photoUrls ?? this.photoUrls,
+      voiceIntroPath: voiceIntroPath ?? this.voiceIntroPath,
     );
   }
 

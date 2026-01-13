@@ -15,6 +15,7 @@ class MatchCandidate {
   final List<String> interests;
   final double compatibility; // 0.0 a 1.0 (100%)
   final String? bodyType; // Nuevo
+  final String? voiceIntroPath;
 
   const MatchCandidate({
     required this.id,
@@ -29,5 +30,6 @@ class MatchCandidate {
     this.interests = const [],
     this.compatibility = 0.5, // Default 50%
     this.bodyType,
+    this.voiceIntroPath,
   });
 }
