@@ -21,7 +21,7 @@ desktop.ini
 *.ipr
 *.iws
 
-# VS Code (si quieres versionar settings, comenta estas líneas)
+# VS Code
 .vscode/
 !.vscode/extensions.json
 !.vscode/settings.json
@@ -55,9 +55,8 @@ doc/api/
 android/.gradle/
 android/local.properties
 android/key.properties
-android/**/GeneratedPluginRegistrant.java
 
-# Android build artifacts (ESTO ES LO IMPORTANTE)
+# Android build artifacts (NO se versionan)
 android/app/build/
 android/build/
 **/android/app/build/
@@ -71,8 +70,10 @@ android/build/
 # iOS / Xcode / CocoaPods
 ###############################################################################
 ios/Pods/
-ios/Podfile.lock
 ios/.symlinks/
+ios/Podfile.lock
+
+# Flutter iOS generated frameworks / engine
 ios/Flutter/Flutter.framework
 ios/Flutter/App.framework
 ios/Flutter/engine/
@@ -92,8 +93,8 @@ ios/build/
 # macOS (Flutter desktop)
 ###############################################################################
 macos/Pods/
-macos/Podfile.lock
 macos/.symlinks/
+macos/Podfile.lock
 macos/Flutter/ephemeral/
 macos/build/
 **/macos/build/
@@ -128,3 +129,31 @@ linux/build/
 ###############################################################################
 # android/app/google-services.json
 # ios/Runner/GoogleService-Info.plist
+
+###############################################################################
+# Python / FastAPI backend (MUY IMPORTANTE PARA TU CASO)
+###############################################################################
+# Virtualenvs
+backend/.venv/
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache / bytecode
+__pycache__/
+*.py[cod]
+
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+
+###############################################################################
+# Local artifacts (opcionales, pero recomendado no versionarlos)
+###############################################################################
+build_errors*.txt
+build_log*.txt
+fly_logs*.txt
+celestya.db
