@@ -1,45 +1,130 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
+###############################################################################
+# OS / Editor junk
+###############################################################################
 .DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*.tmp
+*.bak
+*.old
+*.orig
+*.log
 
-# IntelliJ related
+###############################################################################
+# IDEs
+###############################################################################
+# IntelliJ / Android Studio
+.idea/
 *.iml
 *.ipr
 *.iws
-.idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# VS Code (si quieres versionar settings, comenta estas líneas)
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+###############################################################################
+# Flutter / Dart
+###############################################################################
 .dart_tool/
-.flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
-/build/
-/coverage/
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
 
-# Symbolication related
-app.*.symbols
+# Build outputs
+build/
+**/build/
 
-# Obfuscation related
-app.*.map.json
+# Coverage
+coverage/
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# Generated docs
+doc/api/
+
+###############################################################################
+# Android / Gradle
+###############################################################################
+android/.gradle/
+android/local.properties
+android/key.properties
+android/**/GeneratedPluginRegistrant.java
+
+# Android build artifacts (ESTO ES LO IMPORTANTE)
+android/app/build/
+android/build/
+**/android/app/build/
+**/android/build/
+
+# APK / AAB outputs
+*.apk
+*.aab
+
+###############################################################################
+# iOS / Xcode / CocoaPods
+###############################################################################
+ios/Pods/
+ios/Podfile.lock
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/App.framework
+ios/Flutter/engine/
+ios/Flutter/*.podspec
+ios/Flutter/.last_build_id
+
+# Xcode user data / derived data
+**/*.xcuserstate
+**/*.xcuserdata/
+DerivedData/
+
+# Xcode build
+ios/build/
+**/ios/build/
+
+###############################################################################
+# macOS (Flutter desktop)
+###############################################################################
+macos/Pods/
+macos/Podfile.lock
+macos/.symlinks/
+macos/Flutter/ephemeral/
+macos/build/
+**/macos/build/
+
+###############################################################################
+# Windows (Flutter desktop)
+###############################################################################
+windows/flutter/ephemeral/
+windows/build/
+**/windows/build/
+
+###############################################################################
+# Linux (Flutter desktop)
+###############################################################################
+linux/flutter/ephemeral/
+linux/build/
+**/linux/build/
+
+###############################################################################
+# Secrets / Keys (MUY IMPORTANTE)
+###############################################################################
+.env
+.env.*
+*.keystore
+*.jks
+*.p12
+*.cer
+*.mobileprovision
+
+###############################################################################
+# Firebase (opcional: comenta si SÍ quieres subirlos)
+###############################################################################
+# android/app/google-services.json
+# ios/Runner/GoogleService-Info.plist

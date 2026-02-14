@@ -12,6 +12,7 @@ class CompatQuestion {
   final String id;
   final String title;
   final List<CompatOption> options;
+
   /// Si es true, puede elegir varias opciones; si es false, solo una.
   final bool multi;
 
@@ -40,12 +41,14 @@ const List<CompatQuestion> compatQuestions = [
     options: [
       CompatOption(id: 'flex', label: 'Soy flexible, no siempre asisto'),
       CompatOption(id: 'regular', label: 'Estoy trabajando en ser constante'),
-      CompatOption(id: 'strict', label: 'Lo cuido mucho y asisto siempre que puedo'),
+      CompatOption(
+          id: 'strict', label: 'Lo cuido mucho y asisto siempre que puedo'),
     ],
   ),
   CompatQuestion(
     id: 'q3_scripture',
-    title: '¿Con qué frecuencia tienes estudio personal de las Escrituras y oración?',
+    title:
+        '¿Con qué frecuencia tienes estudio personal de las Escrituras y oración?',
     options: [
       CompatOption(id: 'rare', label: 'Casi nunca'),
       CompatOption(id: 'sometimes', label: 'Algunas veces a la semana'),
@@ -58,7 +61,8 @@ const List<CompatQuestion> compatQuestions = [
     options: [
       CompatOption(id: 'future', label: 'Todavía es algo que quiero mejorar'),
       CompatOption(id: 'sometimes', label: 'Voy cuando puedo'),
-      CompatOption(id: 'priority', label: 'Es una prioridad espiritual para mí'),
+      CompatOption(
+          id: 'priority', label: 'Es una prioridad espiritual para mí'),
     ],
   ),
   CompatQuestion(
@@ -68,13 +72,16 @@ const List<CompatQuestion> compatQuestions = [
     options: [
       CompatOption(id: 'duty', label: 'Como un deber importante'),
       CompatOption(id: 'joy', label: 'Como una oportunidad de crecer'),
-      CompatOption(id: 'balance', label: 'Trato de equilibrarlo con mi vida personal'),
-      CompatOption(id: 'support', label: 'Prefiero apoyar más desde “segunda fila”'),
+      CompatOption(
+          id: 'balance', label: 'Trato de equilibrarlo con mi vida personal'),
+      CompatOption(
+          id: 'support', label: 'Prefiero apoyar más desde “segunda fila”'),
     ],
   ),
   CompatQuestion(
     id: 'q6_lifestyle',
-    title: 'En cuanto a estilo de vida (Palabra de Sabiduría, entretenimiento, límites personales)…',
+    title:
+        'En cuanto a estilo de vida (Palabra de Sabiduría, entretenimiento, límites personales)…',
     options: [
       CompatOption(id: 'relaxed', label: 'Soy más relajado y flexible'),
       CompatOption(id: 'moderate', label: 'Busco un punto medio saludable'),
@@ -86,8 +93,11 @@ const List<CompatQuestion> compatQuestions = [
     title: '¿Cómo son tus hábitos de ejercicio o cuidado físico?',
     options: [
       CompatOption(id: 'low', label: 'Casi no hago ejercicio'),
-      CompatOption(id: 'mid', label: 'Trato de moverme algunas veces a la semana'),
-      CompatOption(id: 'high', label: 'Hago ejercicio constante y es importante para mí'),
+      CompatOption(
+          id: 'mid', label: 'Trato de moverme algunas veces a la semana'),
+      CompatOption(
+          id: 'high',
+          label: 'Hago ejercicio constante y es importante para mí'),
     ],
   ),
   CompatQuestion(
@@ -118,7 +128,8 @@ const List<CompatQuestion> compatQuestions = [
       CompatOption(id: 'dont_know', label: 'Aún no lo sé'),
       CompatOption(id: 'few', label: 'Me gustaría tener pocos'),
       CompatOption(id: 'several', label: 'Me gustaría tener varios'),
-      CompatOption(id: 'open', label: 'Estoy abierto a lo que el Señor disponga'),
+      CompatOption(
+          id: 'open', label: 'Estoy abierto a lo que el Señor disponga'),
     ],
   ),
   CompatQuestion(
@@ -132,11 +143,13 @@ const List<CompatQuestion> compatQuestions = [
   ),
   CompatQuestion(
     id: 'q12_differences',
-    title: '¿Cómo manejas las diferencias de opinión o de carácter con tu pareja?',
+    title:
+        '¿Cómo manejas las diferencias de opinión o de carácter con tu pareja?',
     options: [
       CompatOption(id: 'avoid', label: 'Prefiero evitar el conflicto'),
       CompatOption(id: 'talk', label: 'Me gusta hablar las cosas con calma'),
-      CompatOption(id: 'direct', label: 'Soy muy directo, aunque a veces intenso'),
+      CompatOption(
+          id: 'direct', label: 'Soy muy directo, aunque a veces intenso'),
     ],
   ),
   CompatQuestion(
@@ -146,7 +159,7 @@ const List<CompatQuestion> compatQuestions = [
       CompatOption(id: 'athletic', label: 'Atlética / Tonificada 🏃'),
       CompatOption(id: 'average', label: 'Promedio ⚖️'),
       CompatOption(id: 'curvy', label: 'Con Curvas / Robusto 🍑'),
-      CompatOption(id: 'other', label: 'Fuera de mi talla ✨'),
+      CompatOption(id: 'other', label: 'Fuera de talla ✨'),
     ],
   ),
 ];

@@ -14,7 +14,11 @@ class FilterPreferences {
   
   // Intereses (Tags)
   final List<String> selectedInterests;
-  final List<String> bodyTypes; // Nueva: Filtro por complexión
+  final List<String> bodyTypes; // Filtro por complexión
+  
+  // Nuevo: Estado Civil y Hijos
+  final List<String> maritalStatus; 
+  final String? childrenPreference; // 'con_hijos', 'sin_hijos', o null (ambos)
 
   const FilterPreferences({
     this.ageRange = const RangeValues(18, 35),
@@ -23,6 +27,8 @@ class FilterPreferences {
     this.exerciseFrequency,
     this.selectedInterests = const [],
     this.bodyTypes = const [],
+    this.maritalStatus = const [],
+    this.childrenPreference,
   });
 
   FilterPreferences copyWith({
@@ -32,6 +38,8 @@ class FilterPreferences {
     String? exerciseFrequency,
     List<String>? selectedInterests,
     List<String>? bodyTypes,
+    List<String>? maritalStatus,
+    String? childrenPreference,
   }) {
     return FilterPreferences(
       ageRange: ageRange ?? this.ageRange,
@@ -40,6 +48,8 @@ class FilterPreferences {
       exerciseFrequency: exerciseFrequency ?? this.exerciseFrequency,
       selectedInterests: selectedInterests ?? this.selectedInterests,
       bodyTypes: bodyTypes ?? this.bodyTypes,
+      maritalStatus: maritalStatus ?? this.maritalStatus,
+      childrenPreference: childrenPreference ?? this.childrenPreference,
     );
   }
 }

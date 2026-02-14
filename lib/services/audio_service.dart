@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
@@ -8,7 +7,7 @@ import 'package:flutter/foundation.dart';
 class AudioService {
   final AudioRecorder _recorder = AudioRecorder();
   final AudioPlayer _player = AudioPlayer();
-  
+
   String? _currentPath;
 
   // Recording methods
@@ -16,9 +15,10 @@ class AudioService {
     try {
       if (await _recorder.hasPermission()) {
         final dir = await getApplicationDocumentsDirectory();
-        final fileName = 'voice_intro_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        final fileName =
+            'voice_intro_${DateTime.now().millisecondsSinceEpoch}.m4a';
         _currentPath = p.join(dir.path, fileName);
-        
+
         await _recorder.start(const RecordConfig(), path: _currentPath!);
         return true;
       }

@@ -1,0 +1,4 @@
+storePassword=[TU_PASSWORD]
+keyPassword=[TU_PASSWORD]
+keyAlias=celestya
+storeFile=release.keystore

@@ -1,7 +1,9 @@
+import logging
 import uuid
 from fastapi import UploadFile, File, APIRouter, HTTPException
-from app.services.r2_client import upload_fileobj, presigned_get_url  # ajusta el import a tu ruta real
+from app.services.r2_client import upload_fileobj, presigned_get_url
 
+logger = logging.getLogger("api")
 router = APIRouter()
 
 @router.post("/upload")
@@ -15,7 +17,17 @@ async def upload(file: UploadFile = File(...)):
 
     key = f"uploads/{uuid.uuid4().hex}.{ext}"
 
-    upload_fileobj(file.file, key=key, content_type=file.content_type)
+    try:
+        logger.info(f"Iniciando subida a R2: {key}")
+        upload_fileobj(file.file, key=key, content_type=file.content_type)
+        logger.info(f"Subida a R2 completada: {key}")
+    except Exception as e:
+        logger.error(f"Error crítico al subir a R2: {str(e)}")
+        # Si falla R2, probablemente falten credenciales en .env
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error al subir a almacenamiento remoto: {str(e)}. Verifica configuración R2."
+        )
 
     return {
         "ok": True,

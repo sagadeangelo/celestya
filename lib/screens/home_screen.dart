@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../widgets/empty_state.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -7,7 +6,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -79,7 +78,7 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              
+
               // Características principales
               _FeatureCard(
                 icon: Icons.swipe,
@@ -102,7 +101,7 @@ class HomeScreen extends StatelessWidget {
                 color: theme.colorScheme.tertiary,
               ),
               const SizedBox(height: 32),
-              
+
               // Nota: La funcionalidad de swipe se moverá aquí en el futuro
               Container(
                 padding: const EdgeInsets.all(16),
@@ -150,7 +149,7 @@ class _FeatureCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

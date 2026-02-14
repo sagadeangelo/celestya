@@ -42,6 +42,29 @@ class FilterNotifier extends StateNotifier<FilterPreferences> {
     state = state.copyWith(bodyTypes: currentList);
   }
 
+  void toggleMaritalStatus(String status) {
+    final currentList = List<String>.from(state.maritalStatus);
+    if (currentList.contains(status)) {
+      currentList.remove(status);
+    } else {
+      currentList.add(status);
+    }
+    state = state.copyWith(maritalStatus: currentList);
+  }
+
+  void updateChildrenPreference(String? preference) {
+    // Si selecciona el mismo, deselecciona (toggle)
+    if (state.childrenPreference == preference) {
+      state = state.copyWith(childrenPreference: null); // Reset to null explicitly
+    } else {
+      state = state.copyWith(childrenPreference: preference);
+    }
+  }
+
+  void setFilters(FilterPreferences newFilters) {
+    state = newFilters;
+  }
+
   void resetFilters() {
     state = const FilterPreferences();
   }

@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:hive/hive.dart';
 import '../models/quiz_attempt.dart';
 import 'quiz_api.dart';
@@ -8,7 +7,6 @@ class SyncService {
   static bool _isSyncing = false;
 
   /// Procesa la cola de intentos pendientes.
-  /// Retorna true si todos los pendientes se sincronizaron con éxito.
   static Future<bool> processQueue() async {
     if (_isSyncing) return false;
     _isSyncing = true;
@@ -20,38 +18,52 @@ class SyncService {
           .toList();
 
       if (pendingAttempts.isEmpty) {
-        debugPrint('Sync: No hay tareas pendientes.');
+        if (kDebugMode) {
+          debugPrint('Sync: Nada pendiente.');
+        }
         return true;
       }
 
       bool allSuccess = true;
+      if (kDebugMode) {
+        debugPrint('Sync: Iniciando subida de ${pendingAttempts.length} elementos...');
+      }
 
       for (var attempt in pendingAttempts) {
         try {
-          debugPrint('Sync: Intentando subir cuestionario ${attempt.id}...');
+          if (kDebugMode) {
+            debugPrint('Sync: Subiendo ID ${attempt.id}...');
+          }
           await QuizApi.saveQuizAnswers(attempt.answers);
           
           attempt.status = 'synced';
           attempt.lastError = null;
           await attempt.save();
           
-          debugPrint('Sync: Éxito para ID ${attempt.id}');
+          if (kDebugMode) {
+            debugPrint('Sync: Éxito ID ${attempt.id}');
+          }
         } catch (e) {
+          final errStr = e.toString();
+          if (kDebugMode) {
+            debugPrint('Sync: ERROR en ID ${attempt.id}: $errStr');
+          }
+          
           allSuccess = false;
           attempt.status = 'failed';
           attempt.retryCount++;
-          attempt.lastError = e.toString();
+          attempt.lastError = errStr;
           await attempt.save();
-          
-          debugPrint('Sync: Error para ID ${attempt.id}: $e');
-        }
-      }
 
-      // Cleanup: Eliminar registros sincronizados de hace más de 7 días
-      final weekAgo = DateTime.now().subtract(const Duration(days: 7));
-      final oldRecords = box.values.where((a) => a.status == 'synced' && a.timestamp.isBefore(weekAgo)).toList();
-      for (var record in oldRecords) {
-        await record.delete();
+          // SI ES ERROR 401: ABORTAR TODO EL BUCLE
+          // No sirve de nada seguir intentando con el resto si la sesión está rota.
+          if (errStr.contains('401') || errStr.toLowerCase().contains('token')) {
+            if (kDebugMode) {
+              debugPrint('Sync: ABORTANDO sincronización por error de autenticación (401).');
+            }
+            return false; 
+          }
+        }
       }
 
       return allSuccess;
@@ -60,8 +72,15 @@ class SyncService {
     }
   }
 
-  /// Disparador manual de sincronización (ej: tras login o recuperación de red)
-  /// Tiene un pequeño delay para evitar colisiones si se llama varias veces rápido.
+  /// Limpia todos los intentos de la cola (Nuclear)
+  static Future<void> clearQueue() async {
+    final box = Hive.box<QuizAttempt>('quiz_attempts');
+    await box.clear();
+    if (kDebugMode) {
+      debugPrint('Sync: Cola de intentos borrada.');
+    }
+  }
+
   static void triggerSync() {
     Future.delayed(const Duration(seconds: 1), () => processQueue());
   }
