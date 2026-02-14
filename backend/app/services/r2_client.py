@@ -69,3 +69,12 @@ def presigned_get_url(key: str, expires_seconds: int = 900) -> str:
         Params={"Bucket": R2_BUCKET, "Key": key},
         ExpiresIn=expires_seconds,
     )
+
+def delete_object(key: str) -> None:
+    """
+    Elimina un objeto del bucket R2.
+    """
+    s3_client.delete_object(
+        Bucket=R2_BUCKET,
+        Key=key,
+    )

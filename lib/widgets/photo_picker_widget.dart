@@ -2,10 +2,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'profile_image.dart';
 
 /// Widget for picking and displaying a single photo
 class PhotoPickerWidget extends StatelessWidget {
   final String? photoPath;
+  final String? photoKey;
+  final String? authenticatedUrl; // Added
   final VoidCallback onTap;
   final VoidCallback? onRemove;
   final bool isMainPhoto;
@@ -14,6 +17,8 @@ class PhotoPickerWidget extends StatelessWidget {
   const PhotoPickerWidget({
     super.key,
     this.photoPath,
+    this.photoKey,
+    this.authenticatedUrl, // Added
     required this.onTap,
     this.onRemove,
     this.isMainPhoto = false,
@@ -23,7 +28,6 @@ class PhotoPickerWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final hasPhoto = photoPath != null && photoPath!.isNotEmpty;
 
     return GestureDetector(
       onTap: onTap,
@@ -42,22 +46,37 @@ class PhotoPickerWidget extends StatelessWidget {
                 width: isMainPhoto ? 2 : 1,
               ),
             ),
-            child: hasPhoto
+            child: (photoKey != null && photoKey!.isNotEmpty)
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(11),
-                    child: Image.file(
-                      File(photoPath!),
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return _buildPlaceholder(theme);
-                      },
+                    child: ProfileImage(
+                      photoKey: photoKey!,
+                      photoPath: photoPath,
+                      authenticatedUrl:
+                          authenticatedUrl, // Pass pre-fetched URL
+                      radius: size / 2,
+                      useSquare:
+                          !isMainPhoto, // Square for gallery, circular for main
                     ),
                   )
-                : _buildPlaceholder(theme),
+                : (photoPath != null && photoPath!.isNotEmpty)
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(11),
+                        child: Image.file(
+                          File(photoPath!),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildPlaceholder(theme);
+                          },
+                        ),
+                      )
+                    : _buildPlaceholder(theme),
           ),
-          
+
           // Remove button
-          if (hasPhoto && onRemove != null)
+          if (onRemove != null &&
+              ((photoKey != null && photoKey!.isNotEmpty) ||
+                  (photoPath != null && photoPath!.isNotEmpty)))
             Positioned(
               top: 4,
               right: 4,
@@ -77,9 +96,11 @@ class PhotoPickerWidget extends StatelessWidget {
                 ),
               ),
             ),
-          
+
           // Main photo badge
-          if (isMainPhoto && hasPhoto)
+          if (isMainPhoto &&
+              ((photoKey != null && photoKey!.isNotEmpty) ||
+                  (photoPath != null && photoPath!.isNotEmpty)))
             Positioned(
               bottom: 4,
               left: 4,

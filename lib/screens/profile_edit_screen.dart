@@ -1,4 +1,5 @@
 // lib/screens/profile_edit_screen.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../data/user_profile.dart';
@@ -7,7 +8,12 @@ import '../widgets/photo_picker_widget.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
-class ProfileEditScreen extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../features/profile/presentation/providers/profile_provider.dart';
+import '../services/users_api.dart';
+import '../widgets/profile_image.dart';
+
+class ProfileEditScreen extends ConsumerStatefulWidget {
   final UserProfile profile;
 
   const ProfileEditScreen({
@@ -16,18 +22,18 @@ class ProfileEditScreen extends StatefulWidget {
   });
 
   @override
-  State<ProfileEditScreen> createState() => _ProfileEditScreenState();
+  ConsumerState<ProfileEditScreen> createState() => _ProfileEditScreenState();
 }
 
-class _ProfileEditScreenState extends State<ProfileEditScreen> {
+class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   final _formKey = GlobalKey<FormState>();
   final ProfileService _profileService = ProfileService();
-  
+
   bool _saving = false;
-  
+
   // Controllers for text fields
-  late TextEditingController _nameController;
-  late TextEditingController _ageController;
+  late TextEditingController _firstNameController;
+  late TextEditingController _lastNameController;
   late TextEditingController _heightController;
   late TextEditingController _locationController;
   late TextEditingController _stakeWardController;
@@ -40,54 +46,158 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   late TextEditingController _occupationController;
   // Removed _interestsController in favor of list selection
   List<String> _selectedInterests = [];
-  
+
   // Dropdown values
   Gender? _selectedGender;
+  MaritalStatus? _selectedMaritalStatus;
+  bool _hasChildren = false;
   TempleRecommendStatus? _selectedTempleRecommend;
   ActivityLevel? _selectedActivityLevel;
   String? _selectedBodyType;
-  
+
+  // Birthdate and Calculated Age
+  DateTime? _selectedBirthdate;
+  int? _calculatedAge;
+
   // Photo paths
   String? _profilePhotoPath;
-  List<String> _additionalPhotoPaths = [];
+  String? _profilePhotoKey;
+  List<GalleryItem> _galleryItems = [];
+  bool _isUploadingGallery = false;
+
+  // Geolocation State
+  double? _latitude;
+  double? _longitude;
+  bool _gettingLocation = false;
+  String? _locationError;
+
+  bool _hydrated = false;
 
   @override
   void initState() {
     super.initState();
-    
-    // Initialize controllers with existing profile data
-    _nameController = TextEditingController(text: widget.profile.name);
-    _ageController = TextEditingController(
-      text: widget.profile.age?.toString() ?? '',
-    );
-    _heightController = TextEditingController(
-      text: widget.profile.heightCm?.toString() ?? '',
-    );
-    _locationController = TextEditingController(text: widget.profile.location);
-    _stakeWardController = TextEditingController(text: widget.profile.stakeWard);
-    _missionServedController = TextEditingController(text: widget.profile.missionServed);
-    _missionYearsController = TextEditingController(text: widget.profile.missionYears);
-    _favoriteCallingController = TextEditingController(text: widget.profile.favoriteCalling);
-    _favoriteScriptureController = TextEditingController(text: widget.profile.favoriteScripture);
-    _bioController = TextEditingController(text: widget.profile.bio);
-    _educationController = TextEditingController(text: widget.profile.education);
-    _occupationController = TextEditingController(text: widget.profile.occupation);
-    _selectedInterests = List.from(widget.profile.interests);
-    
-    _selectedGender = widget.profile.gender;
-    _selectedTempleRecommend = widget.profile.templeRecommend;
-    _selectedActivityLevel = widget.profile.activityLevel;
-    _selectedBodyType = widget.profile.bodyType;
-    
-    // Initialize photo paths
-    _profilePhotoPath = widget.profile.profilePhotoUrl;
-    _additionalPhotoPaths = List.from(widget.profile.photoUrls);
+
+    // Initialize all controllers first (empty or placeholder)
+    _firstNameController = TextEditingController();
+    _lastNameController = TextEditingController();
+    _heightController = TextEditingController();
+    _locationController = TextEditingController();
+    _stakeWardController = TextEditingController();
+    _missionServedController = TextEditingController();
+    _missionYearsController = TextEditingController();
+    _favoriteCallingController = TextEditingController();
+    _favoriteScriptureController = TextEditingController();
+    _bioController = TextEditingController();
+    _educationController = TextEditingController();
+    _occupationController = TextEditingController();
+
+    _hydrate();
+
+    // Auto-detect location if empty
+    if (_locationController.text.trim().isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _getCurrentLocation();
+      });
+    }
+  }
+
+  void _hydrate() {
+    if (_hydrated) return;
+
+    final p = widget.profile;
+
+    // Sanitización rigurosa para evitar el literal "null" en el controlador
+    // Sanitización rigurosa
+    final rawName = p.name ?? "";
+    final cleanName = rawName
+        .replaceAll(RegExp(r'\bnull\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'[,\\.\\s]+$'), '')
+        .replaceAll(RegExp(r'^[,\\.\\s]+'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+    // Split logic
+    final parts = cleanName.split(' ');
+    if (parts.isNotEmpty) {
+      _firstNameController.text = parts.first;
+      if (parts.length > 1) {
+        _lastNameController.text = parts.sublist(1).join(' ');
+      } else {
+        _lastNameController.text = '';
+      }
+    } else {
+      _firstNameController.text = '';
+      _lastNameController.text = '';
+    }
+    _heightController.text = p.heightCm?.toString() ?? '';
+    _locationController.text = p.location ?? '';
+    _stakeWardController.text = p.stakeWard ?? '';
+    _missionServedController.text = p.missionServed ?? '';
+    _missionYearsController.text = p.missionYears ?? '';
+    _favoriteCallingController.text = p.favoriteCalling ?? '';
+    _favoriteScriptureController.text = p.favoriteScripture ?? '';
+    _bioController.text = p.bio ?? '';
+    _educationController.text = p.education ?? '';
+    _occupationController.text = p.occupation ?? '';
+
+    _selectedInterests = List.from(p.interests);
+    _selectedGender = p.gender;
+    _selectedMaritalStatus = p.maritalStatus;
+    _hasChildren = p.hasChildren ?? false;
+    _selectedTempleRecommend = p.templeRecommend;
+    _selectedActivityLevel = p.activityLevel;
+    _selectedBodyType = p.bodyType;
+
+    _selectedBirthdate = p.birthdate;
+    _calculatedAge = p.ageFromBirthdate;
+
+    _profilePhotoPath = p.profilePhotoUrl;
+    _profilePhotoKey = p.profilePhotoKey;
+
+    // Inicializar items de galería con keys y URLs firmadas del backend (PASO 5)
+    final keys = p.galleryPhotoKeys;
+    final urls = p.photoUrls;
+    _galleryItems = [];
+    for (int i = 0; i < keys.length; i++) {
+      final key = keys[i];
+      String? url;
+      if (i < urls.length) url = urls[i];
+      _galleryItems.add(GalleryItem(key: key, url: url));
+    }
+
+    _latitude = p.latitude;
+    _longitude = p.longitude;
+
+    _hydrated = true;
+
+    // Cargar URLs para las keys de galería en batch
+    if (_galleryItems.isNotEmpty) {
+      _fetchGalleryUrls();
+    }
+  }
+
+  Future<void> _fetchGalleryUrls() async {
+    final keys =
+        _galleryItems.where((i) => i.isRemote).map((i) => i.key!).toList();
+    if (keys.isEmpty) return;
+
+    final urlMap = await UsersApi.fetchSignedUrlsBatch(keys);
+    if (!mounted) return;
+
+    setState(() {
+      _galleryItems = _galleryItems.map((item) {
+        if (item.isRemote && urlMap.containsKey(item.key)) {
+          return item.copyWith(url: urlMap[item.key]);
+        }
+        return item;
+      }).toList();
+    });
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _ageController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _heightController.dispose();
     _locationController.dispose();
     _stakeWardController.dispose();
@@ -98,76 +208,123 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _bioController.dispose();
     _educationController.dispose();
     _occupationController.dispose();
-    // _interestsController removed
     super.dispose();
   }
 
   Future<void> _getCurrentLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    // Test if location services are enabled.
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Los servicios de ubicación están desactivados.')),
-        );
-      }
-      return;
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Permisos de ubicación denegados')),
-          );
-        }
-        return;
-      }
-    }
-    
-    if (permission == LocationPermission.deniedForever) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Permisos de ubicación permanentemente denegados')),
-        );
-      }
-      return;
-    } 
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Obteniendo ubicación...')),
-      );
-    }
+    setState(() {
+      _gettingLocation = true;
+      _locationError = null;
+    });
 
     try {
-      final position = await Geolocator.getCurrentPosition();
+      // 1. Check Service
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw 'Ubicación desactivada. Por favor actívala.';
+      }
+
+      // 2. Check Permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw 'Permisos denegados. No podemos detectar tu ciudad.';
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw 'Permisos denegados permanentemente.';
+      }
+
+      // 3. Get Position with TimeLimit
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+
+      _latitude = position.latitude;
+      _longitude = position.longitude;
+
+      // 4. Reverse Geocoding
       final placemarks = await placemarkFromCoordinates(
-        position.latitude, 
+        position.latitude,
         position.longitude,
       );
 
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
+        final city = place.locality ?? place.subAdministrativeArea ?? '';
+        final region = place.administrativeArea ?? '';
+        final country = place.country ?? '';
+
+        // Flexible Format: City, Region (if exists) OR City, Country
+        String formattedLocation = city;
+        if (region.isNotEmpty) {
+          formattedLocation += ', $region';
+        } else if (country.isNotEmpty) {
+          formattedLocation += ', $country';
+        }
+
         setState(() {
-          _locationController.text = '${place.locality}, ${place.administrativeArea}';
+          _locationController.text = formattedLocation;
         });
+
         if (mounted) {
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ubicación detectada exitosamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error obteniendo ubicación: $e')),
-        );
+        setState(() {
+          _locationError = e.toString();
+        });
+
+        if (e.toString().contains('permanentemente')) {
+          _showPermissionDialog();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _gettingLocation = false);
       }
     }
+  }
+
+  void _showPermissionDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Permisos de Ubicación'),
+        content: const Text(
+            'Necesitamos acceso a tu ubicación para sugerirte personas cerca. Por favor habilítalo en la configuración de tu teléfono.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar')),
+          TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Geolocator.openAppSettings();
+              },
+              child: const Text('Abrir Configuración')),
+        ],
+      ),
+    );
   }
 
   Future<void> _saveProfile() async {
@@ -177,18 +334,28 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     setState(() => _saving = true);
 
-    setState(() => _saving = true);
+    final String fName = _firstNameController.text.trim();
+    final String lName = _lastNameController.text.trim();
+    final String combined = '$fName $lName';
 
-    // Interests are already in _selectedInterests list
+    final String cleanedName = combined
+        .replaceAll(RegExp(r'\bnull\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'[,\\.\\s]+$'), '')
+        .replaceAll(RegExp(r'^[,\\.\\s]+'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
 
     final updatedProfile = UserProfile(
-      name: _nameController.text.trim(),
-      age: int.tryParse(_ageController.text),
+      name: cleanedName.isEmpty ? null : cleanedName,
+      birthdate: _selectedBirthdate,
+      age: _calculatedAge,
       gender: _selectedGender,
       heightCm: int.tryParse(_heightController.text),
       location: _locationController.text.trim().isEmpty
           ? null
           : _locationController.text.trim(),
+      latitude: _latitude,
+      longitude: _longitude,
       stakeWard: _stakeWardController.text.trim().isEmpty
           ? null
           : _stakeWardController.text.trim(),
@@ -201,6 +368,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       templeRecommend: _selectedTempleRecommend,
       activityLevel: _selectedActivityLevel,
       bodyType: _selectedBodyType,
+      maritalStatus: _selectedMaritalStatus,
+      hasChildren: _hasChildren,
       favoriteCalling: _favoriteCallingController.text.trim().isEmpty
           ? null
           : _favoriteCallingController.text.trim(),
@@ -216,26 +385,31 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       occupation: _occupationController.text.trim().isEmpty
           ? null
           : _occupationController.text.trim(),
-      interests: _selectedInterests, // Updated from text input
+      interests: _selectedInterests,
       profilePhotoUrl: _profilePhotoPath,
-      photoUrls: _additionalPhotoPaths,
+      profilePhotoKey: _profilePhotoKey,
+      galleryPhotoKeys:
+          _galleryItems.where((i) => i.isRemote).map((i) => i.key!).toList(),
     );
 
-    final success = await _profileService.saveProfile(updatedProfile);
+    try {
+      await ref.read(profileProvider.notifier).updateProfile(updatedProfile);
 
-    setState(() => _saving = false);
+      if (!mounted) return;
 
-    if (!mounted) return;
+      setState(() => _saving = false);
 
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Perfil guardado exitosamente')),
-      );
-      Navigator.of(context).pop(true); // Return true to indicate success
-    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Error al guardar el perfil'),
+            content: Text('Perfil guardado y sincronizado exitosamente')),
+      );
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al guardar: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -245,14 +419,41 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Future<void> _pickProfilePhoto() async {
     final photoPath = await ImagePickerHelper.pickImage(context);
     if (photoPath != null) {
-      setState(() {
-        _profilePhotoPath = photoPath;
-      });
+      // PROMPT 2 - Upload inmediato
+      setState(() => _saving = true);
+      try {
+        final newKey =
+            await UsersApi.uploadAndSaveProfilePhoto(File(photoPath));
+        if (newKey.isNotEmpty) {
+          // Refrescar estado global
+          ref.read(profileProvider.notifier).loadProfile();
+          setState(() {
+            _profilePhotoKey = newKey;
+            _profilePhotoPath =
+                photoPath; // Local path for immediate visual feedback
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Foto actualizada correctamente')),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('Error al subir imagen: $e'),
+                backgroundColor: Colors.red),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _saving = false);
+      }
     }
   }
 
   Future<void> _pickAdditionalPhoto() async {
-    if (_additionalPhotoPaths.length >= 6) {
+    if (_galleryItems.length >= 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Máximo 6 fotos adicionales'),
@@ -264,27 +465,116 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     final photoPath = await ImagePickerHelper.pickImage(context);
     if (photoPath != null) {
+      // PROMPT 1 & 4 - Append local item first for immediate feedback
+      final localFile = File(photoPath);
+      final localItem = GalleryItem(file: localFile);
+
       setState(() {
-        _additionalPhotoPaths.add(photoPath);
+        _galleryItems.add(localItem);
+        _isUploadingGallery = true;
       });
+
+      try {
+        final success = await UsersApi.uploadAndAddGalleryPhoto(localFile);
+        if (success) {
+          // Obtener el perfil actualizado para tener la nueva key
+          final updatedProfile = await UsersApi.getProfile();
+          if (updatedProfile != null && mounted) {
+            // Reemplazar el item local por el remoto con su key
+            final newKey = updatedProfile.galleryPhotoKeys.last;
+
+            // Actualizar provider global silenciosamente
+            ref.read(profileProvider.notifier).loadProfile();
+
+            setState(() {
+              final index = _galleryItems.indexOf(localItem);
+              if (index != -1) {
+                _galleryItems[index] = GalleryItem(key: newKey);
+              }
+              _isUploadingGallery = false;
+            });
+
+            // Cargar la signed URL del nuevo item
+            _fetchGalleryUrls();
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Foto añadida a la galería')),
+              );
+            }
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _galleryItems.remove(localItem);
+            _isUploadingGallery = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('Error al subir imagen: $e'),
+                backgroundColor: Colors.red),
+          );
+        }
+      }
     }
   }
 
-  void _removeProfilePhoto() {
-    setState(() {
-      _profilePhotoPath = null;
-    });
-  }
+  Future<void> _removeAdditionalPhoto(int index) async {
+    final item = _galleryItems[index];
+    if (item.isLocal) {
+      setState(() => _galleryItems.removeAt(index));
+      return;
+    }
 
-  void _removeAdditionalPhoto(int index) {
-    setState(() {
-      _additionalPhotoPaths.removeAt(index);
-    });
+    setState(() => _saving = true);
+    try {
+      final success = await UsersApi.removeGalleryPhoto(item.key!);
+      if (success) {
+        // Actualizar provider global
+        ref.read(profileProvider.notifier).loadProfile();
+
+        setState(() {
+          _galleryItems.removeAt(index);
+          _saving = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Foto eliminada')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Error al eliminar imagen: $e'),
+              backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // Determine location icon color/status
+    Color locationIconColor = Colors.grey;
+    IconData locationIcon = Icons.location_on_outlined;
+
+    if (_gettingLocation) {
+      locationIconColor = Colors.blue;
+      locationIcon = Icons.autorenew;
+    } else if (_latitude != null && _longitude != null) {
+      locationIconColor = Colors.green;
+      locationIcon = Icons.check_circle;
+    } else if (_locationError != null) {
+      locationIconColor = Colors.red;
+      locationIcon = Icons.error_outline;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -316,17 +606,20 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             // Photos Section
             _buildSectionHeader('Fotos', Icons.photo_library),
             const SizedBox(height: 16),
-            
+
             // Profile Photo
             Center(
               child: Column(
                 children: [
-                  PhotoPickerWidget(
-                    photoPath: _profilePhotoPath,
+                  GestureDetector(
                     onTap: _pickProfilePhoto,
-                    onRemove: _profilePhotoPath != null ? _removeProfilePhoto : null,
-                    isMainPhoto: true,
-                    size: 140,
+                    child: ProfileImage(
+                      photoPath:
+                          _profilePhotoPath, // Local path for immediate preview
+                      photoKey:
+                          _profilePhotoKey, // Usar la key del estado local
+                      radius: 70,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -338,9 +631,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Additional Photos
             Text(
               'Fotos adicionales (hasta 6)',
@@ -349,7 +642,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            
+
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -358,70 +651,93 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
               ),
-              itemCount: _additionalPhotoPaths.length < 6 
-                  ? _additionalPhotoPaths.length + 1 
-                  : 6,
+              itemCount:
+                  _galleryItems.length < 6 ? _galleryItems.length + 1 : 6,
               itemBuilder: (context, index) {
-                if (index < _additionalPhotoPaths.length) {
-                  // Show existing photo
+                if (index < _galleryItems.length) {
+                  final item = _galleryItems[index];
+
+                  // UI para Foto Local Nueva
+                  if (item.isLocal) {
+                    return Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            item.file!,
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        if (_isUploadingGallery)
+                          Positioned.fill(
+                            child: Container(
+                              color: Colors.black26,
+                              child: const Center(
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                          ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: GestureDetector(
+                            onTap: () => _removeAdditionalPhoto(index),
+                            child: CircleAvatar(
+                              radius: 12,
+                              backgroundColor: theme.colorScheme.error,
+                              child: const Icon(Icons.close,
+                                  size: 14, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+
+                  // UI para Foto Remota Existente
                   return PhotoPickerWidget(
-                    photoPath: _additionalPhotoPaths[index],
-                    onTap: () {}, // No action on tap for existing photos
+                    photoKey: item.key,
+                    authenticatedUrl:
+                        item.url, // Pasar la URL firmada ya cargada
+                    onTap: () {},
                     onRemove: () => _removeAdditionalPhoto(index),
                     size: 100,
                   );
                 } else {
-                  // Show add button
                   return PhotoPickerWidget(
                     photoPath: null,
-                    onTap: _pickAdditionalPhoto,
+                    onTap: _isUploadingGallery
+                        ? () {}
+                        : () => _pickAdditionalPhoto(),
                     size: 100,
                   );
                 }
               },
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Basic Information Section
             _buildSectionHeader('Información básica', Icons.person),
             const SizedBox(height: 16),
-            
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Nombre completo',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.badge),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'El nombre es requerido';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            
+
+            // Row: Nombre + Apellido
             Row(
               children: [
                 Expanded(
                   child: TextFormField(
-                    controller: _ageController,
+                    controller: _firstNameController,
                     decoration: const InputDecoration(
-                      labelText: 'Edad',
+                      labelText: 'Nombre',
                       border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.cake),
+                      prefixIcon: Icon(Icons.badge),
                     ),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
+                      if (value == null || value.trim().isEmpty) {
                         return 'Requerido';
-                      }
-                      final age = int.tryParse(value);
-                      if (age == null || age < 18 || age > 100) {
-                        return 'Edad inválida';
                       }
                       return null;
                     },
@@ -429,8 +745,65 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 ),
                 const SizedBox(width: 16),
                 Expanded(
+                  child: TextFormField(
+                    controller: _lastNameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Apellido',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Requerido';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Row 1: Age + Gender
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () async {
+                      final now = DateTime.now();
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _selectedBirthdate ??
+                            now.subtract(const Duration(days: 365 * 25)),
+                        firstDate: DateTime(now.year - 100),
+                        lastDate: DateTime(now.year - 18),
+                        helpText: 'Selecciona tu fecha de nacimiento',
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _selectedBirthdate = picked;
+                          // Recalcular edad
+                          final tempProfile = UserProfile(birthdate: picked);
+                          _calculatedAge = tempProfile.ageFromBirthdate;
+                        });
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Edad (calculada)',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.cake),
+                      ),
+                      child: Text(
+                        _calculatedAge?.toString() ?? 'Set birthdate',
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
                   child: DropdownButtonFormField<Gender>(
-                    initialValue: _selectedGender,
+                    value: _selectedGender,
                     decoration: const InputDecoration(
                       labelText: 'Género',
                       border: OutlineInputBorder(),
@@ -442,44 +815,80 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         child: Text(gender.displayName),
                       );
                     }).toList(),
-                    onChanged: (value) {
-                      setState(() => _selectedGender = value);
-                    },
-                    validator: (value) {
-                      if (value == null) {
-                        return 'Requerido';
-                      }
-                      return null;
-                    },
+                    onChanged: (value) =>
+                        setState(() => _selectedGender = value),
+                    validator: (value) => value == null ? 'Requerido' : null,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            
-            TextFormField(
-              controller: _heightController,
+
+            // Row 2: Marital Status
+            DropdownButtonFormField<MaritalStatus>(
+              initialValue: _selectedMaritalStatus,
               decoration: const InputDecoration(
-                labelText: 'Altura (cm)',
+                labelText: 'Estado Civil',
                 border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.height),
-                helperText: 'Ejemplo: 170 cm',
+                prefixIcon: Icon(Icons.favorite_border),
               ),
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              validator: (value) {
-                if (value != null && value.isNotEmpty) {
-                  final height = int.tryParse(value);
-                  if (height == null || height < 100 || height > 250) {
-                    return 'Altura inválida';
-                  }
-                }
-                return null;
-              },
+              items: MaritalStatus.values.map((status) {
+                return DropdownMenuItem(
+                  value: status,
+                  child: Text(status.displayName),
+                );
+              }).toList(),
+              onChanged: (value) =>
+                  setState(() => _selectedMaritalStatus = value),
             ),
             const SizedBox(height: 16),
 
-            // Complexión (Nuevo)
+            // Row 3: Height + Has Children
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: TextFormField(
+                    controller: _heightController,
+                    decoration: const InputDecoration(
+                      labelText: 'Altura (cm)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.height),
+                      helperText: 'Ej. 170',
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (value) {
+                      if (value != null && value.isNotEmpty) {
+                        final height = int.tryParse(value);
+                        if (height == null || height < 100 || height > 250) {
+                          return 'Inválida';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  flex: 3,
+                  child: SwitchListTile(
+                    title: const Text('¿Hijos?'),
+                    subtitle: Text(_hasChildren ? 'Sí' : 'No'),
+                    value: _hasChildren,
+                    onChanged: (bool value) {
+                      setState(() => _hasChildren = value);
+                    },
+                    secondary: const Icon(Icons.child_care),
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Complexión
             DropdownButtonFormField<String>(
               initialValue: _selectedBodyType,
               decoration: const InputDecoration(
@@ -497,28 +906,50 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               onChanged: (value) => setState(() => _selectedBodyType = value),
             ),
             const SizedBox(height: 16),
-                        
+
+            // --- Location Section (Updated) ---
             TextFormField(
               controller: _locationController,
               decoration: InputDecoration(
-                labelText: 'Ubicación',
+                labelText: 'Ubicación *',
                 border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.location_on),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.my_location, color: Colors.blue),
-                  onPressed: _getCurrentLocation,
-                  tooltip: 'Usar mi ubicación GPS',
-                ),
-                helperText: 'Ciudad, Estado',
+                prefixIcon: Icon(locationIcon, color: locationIconColor),
+                // Remove suffix icon to use dedicated button
+                helperText:
+                    _locationError ?? 'Ciudad, Región o País (Manual o GPS)',
+                helperStyle: _locationError != null
+                    ? const TextStyle(color: Colors.red)
+                    : null,
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty)
+                  return 'La ubicación es requerida';
+                return null;
+              },
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _gettingLocation ? null : _getCurrentLocation,
+                icon: _gettingLocation
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.my_location),
+                label: Text(_gettingLocation
+                    ? 'Detectando...'
+                    : 'Detectar mi ubicación'),
               ),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // LDS Information Section
             _buildSectionHeader('Información LDS', Icons.church),
             const SizedBox(height: 16),
-            
+
             TextFormField(
               controller: _stakeWardController,
               decoration: const InputDecoration(
@@ -529,7 +960,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             TextFormField(
               controller: _missionServedController,
               decoration: const InputDecoration(
@@ -540,7 +971,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             TextFormField(
               controller: _missionYearsController,
               decoration: const InputDecoration(
@@ -551,7 +982,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             DropdownButtonFormField<TempleRecommendStatus>(
               initialValue: _selectedTempleRecommend,
               decoration: const InputDecoration(
@@ -570,7 +1001,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               },
             ),
             const SizedBox(height: 16),
-            
+
             DropdownButtonFormField<ActivityLevel>(
               initialValue: _selectedActivityLevel,
               decoration: const InputDecoration(
@@ -589,7 +1020,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               },
             ),
             const SizedBox(height: 16),
-            
+
             TextFormField(
               controller: _favoriteCallingController,
               decoration: const InputDecoration(
@@ -600,7 +1031,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               maxLines: 2,
             ),
             const SizedBox(height: 16),
-            
+
             TextFormField(
               controller: _favoriteScriptureController,
               decoration: const InputDecoration(
@@ -611,13 +1042,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               ),
               maxLines: 2,
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // About Me Section
             _buildSectionHeader('Sobre mí', Icons.info),
             const SizedBox(height: 16),
-            
+
             TextFormField(
               controller: _bioController,
               decoration: const InputDecoration(
@@ -629,7 +1060,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               maxLength: 500,
             ),
             const SizedBox(height: 16),
-            
+
             Text(
               'Intereses (Selecciona al menos 3)',
               style: Theme.of(context).textTheme.titleSmall,
@@ -655,13 +1086,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 );
               }).toList(),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Education & Career Section
             _buildSectionHeader('Educación y carrera', Icons.school),
             const SizedBox(height: 16),
-            
+
             TextFormField(
               controller: _educationController,
               decoration: const InputDecoration(
@@ -672,7 +1103,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             TextFormField(
               controller: _occupationController,
               decoration: const InputDecoration(
@@ -681,10 +1112,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 prefixIcon: Icon(Icons.work),
               ),
             ),
-            
+
             const SizedBox(height: 32),
-            
-            // Save Button (also in AppBar)
+
+            // Save Button
             FilledButton.icon(
               onPressed: _saving ? null : _saveProfile,
               icon: _saving
@@ -699,14 +1130,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   : const Icon(Icons.save),
               label: Text(_saving ? 'Guardando...' : 'Guardar perfil'),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             OutlinedButton(
               onPressed: () => Navigator.of(context).pop(false),
               child: const Text('Cancelar'),
             ),
-            
+
             const SizedBox(height: 32),
           ],
         ),
@@ -716,7 +1147,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
   Widget _buildSectionHeader(String title, IconData icon) {
     final theme = Theme.of(context);
-    
+
     return Row(
       children: [
         Icon(icon, color: theme.colorScheme.primary),

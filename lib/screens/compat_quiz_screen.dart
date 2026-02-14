@@ -2,12 +2,12 @@
 import 'package:flutter/material.dart';
 
 import '../data/compat_questions.dart';
-import 'package:Celestya/services/compat_storage.dart'; // Mantener por compatibilidad legacy
-import 'package:Celestya/services/quiz_api.dart';
-import 'package:Celestya/services/speech_service.dart';
-import 'package:Celestya/services/quiz_local_storage.dart';
-import 'package:Celestya/models/quiz_attempt.dart';
-import 'package:Celestya/widgets/voice_answer_field.dart';
+import 'package:celestya/services/compat_storage.dart'; // Mantener por compatibilidad legacy
+import 'package:celestya/services/quiz_api.dart';
+import 'package:celestya/services/speech_service.dart';
+import 'package:celestya/services/quiz_local_storage.dart';
+import 'package:celestya/models/quiz_attempt.dart';
+import 'package:celestya/widgets/voice_answer_field.dart';
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 import 'package:workmanager/workmanager.dart';
@@ -32,6 +32,36 @@ class _CompatQuizScreenState extends State<CompatQuizScreen> {
     super.initState();
     SpeechService.init();
     _resumeProgress();
+  }
+
+  void _confirmReset() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Reiniciar cuestionario?'),
+        content: const Text('Se borrará tu progreso actual y comenzarás desde la primera pregunta.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _resetQuiz();
+            },
+            child: const Text('Reiniciar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _resetQuiz() async {
+    await QuizLocalStorage.clearAnswers();
+    await CompatStorage.reset();
+    setState(() {
+      _answers.clear();
+      _currentIndex = 0;
+      _lastWords = '';
+    });
   }
 
   Future<void> _resumeProgress() async {
@@ -212,6 +242,13 @@ class _CompatQuizScreenState extends State<CompatQuizScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Cuestionario de compatibilidad'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Reiniciar cuestionario',
+            onPressed: () => _confirmReset(),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(6.0),
           child: TweenAnimationBuilder<double>(

@@ -1,60 +1,60 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'auth_api.dart';
+import 'token_storage.dart';
+import 'dart:async';
 
 class AuthService {
-  static const String _keyToken = 'auth_token';
-  static const String _keyEmail = 'auth_email';
-  static const String _keyPassword = 'auth_password'; // NOTE: In production use secure storage
+  // Cache en memoria para acceso instantáneo
+  static String? _memToken;
+  static const String _tokenType = 'Bearer';
 
-  /// Guarda las credenciales y el token para inicio de sesión automático
-  static Future<void> saveCredentials(String email, String password, String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyToken, token);
-    await prefs.setString(_keyEmail, email);
-    await prefs.setString(_keyPassword, password);
-  }
-
-  /// Verifica si hay credenciales guardadas y válidas intentando hacer login
-  /// Retorna true si el login automático fue exitoso
-  static Future<bool> tryAutoLogin() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final email = prefs.getString(_keyEmail);
-      final password = prefs.getString(_keyPassword);
-
-      if (email == null || password == null) {
-        return false;
-      }
-
-      // Intentamos hacer login de nuevo para obtener un token fresco
-      final newToken = await AuthApi.login(email, password);
-      
-      // Si funciona, actualizamos el token
-      await prefs.setString(_keyToken, newToken);
-      return true;
-    } catch (e) {
-      // Si falla el login (ej. contraseña cambiada), limpiamos credenciales
-      await clearCredentials();
-      return false;
+  static Future<void> saveToken(String accessToken) async {
+    // Sanitize
+    String clean = accessToken.trim().replaceAll('"', '').replaceAll("'", "");
+    if (clean.toLowerCase().startsWith('bearer ')) {
+      clean = clean.substring(7).trim();
     }
+
+    _memToken = clean;
+    await TokenStorage.saveToken(clean);
   }
 
-  /// Cierra sesión borrando todas las credenciales
+  static Future<bool> tryAutoLogin() async {
+    // Solo verificamos si tenemos token.
+    // La validación real ocurrirá cuando se haga la primera petición a la API.
+    final token = await TokenStorage.getToken();
+    if (token != null && token.isNotEmpty) {
+      _memToken = token;
+      return true;
+    }
+    return false;
+  }
+
   static Future<void> logout() async {
-    await clearCredentials();
-  }
-
-  /// Limpia las credenciales almacenadas
-  static Future<void> clearCredentials() async {
+    await TokenStorage.deleteToken();
+    _memToken = null;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_keyToken);
-    await prefs.remove(_keyEmail);
-    await prefs.remove(_keyPassword);
+    await prefs.clear(); // Limpia otros datos no sensibles si los hay
   }
 
-  /// Obtiene el token actual (si existe)
+  static Future<String?> getAuthHeader() async {
+    if (_memToken != null) {
+      return '$_tokenType $_memToken';
+    }
+
+    final token = await TokenStorage.getToken();
+    if (token != null && token.isNotEmpty) {
+      _memToken = token;
+      return '$_tokenType $token';
+    }
+    return null;
+  }
+
   static Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyToken);
+    if (_memToken != null) return _memToken;
+    final token = await TokenStorage.getToken();
+    if (token != null) {
+      _memToken = token;
+    }
+    return _memToken;
   }
 }

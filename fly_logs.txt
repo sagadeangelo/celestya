@@ -1,0 +1,198 @@
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 401, in run_asgi
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    result = await app(  # type: ignore[func-returns-value]
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 70, in __call__
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    return await self.app(scope, receive, send)
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/fastapi/applications.py", line 1054, in __call__
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    await super().__call__(scope, receive, send)
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/starlette/applications.py", line 113, in __call__
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    await self.middleware_stack(scope, receive, send)
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/starlette/middleware/errors.py", line 187, in __call__
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    raise exc
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/starlette/middleware/errors.py", line 165, in __call__
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    await self.app(scope, receive, _send)
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/starlette/middleware/cors.py", line 85, in __call__
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    await self.app(scope, receive, send)
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 62, in wrapped_app
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    raise exc
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 51, in wrapped_app
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    await app(scope, receive, sender)
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 715, in __call__
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    await self.middleware_stack(scope, receive, send)
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 735, in app
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    await route.handle(scope, receive, send)
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 288, in handle
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    await self.app(scope, receive, send)
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 76, in app
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 62, in wrapped_app
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    raise exc
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/starlette/_exception_handler.py", line 51, in wrapped_app
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    await app(scope, receive, sender)
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/starlette/routing.py", line 73, in app
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    response = await f(request)
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]               ^^^^^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 301, in app
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    raw_response = await run_endpoint_function(
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/fastapi/routing.py", line 214, in run_endpoint_function
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    return await run_in_threadpool(dependant.call, **values)
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/starlette/concurrency.py", line 39, in run_in_threadpool
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    return await anyio.to_thread.run_sync(func, *args)
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/anyio/to_thread.py", line 63, in run_sync
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    return await get_async_backend().run_sync_in_worker_thread(
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 2502, in run_sync_in_worker_thread
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    return await future
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]           ^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 986, in run
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    result = context.run(func, *args)
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]             ^^^^^^^^^^^^^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/app/app/routes/auth.py", line 314, in verify_status
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    user = db.query(models.User).filter(models.User.email == email.lower().strip()).first()
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/orm/query.py", line 2728, in first
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    return self.limit(1)._iter().first()  # type: ignore
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]           ^^^^^^^^^^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/orm/query.py", line 2827, in _iter
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]                                                  ^^^^^^^^^^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2362, in execute
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    return self._execute_internal(
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]           ^^^^^^^^^^^^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2247, in _execute_internal
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    result: Result[Any] = compile_state_cls.orm_execute_statement(
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    result = conn.execute(
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]             ^^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1418, in execute
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    return meth(
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]           ^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 515, in _execute_on_connection
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    return connection._execute_clauseelement(
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1640, in _execute_clauseelement
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    ret = self._execute_context(
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]          ^^^^^^^^^^^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    return self._exec_single_context(
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    self._handle_dbapi_exception(
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    self.dialect.do_execute(
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]  File "/usr/local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]    cursor.execute(statement, parameters)
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: users.marital_status
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][SQL: SELECT users.id AS users_id, users.email AS users_email, users.password_hash AS users_password_hash, users.birthdate AS users_birthdate, users.age_bucket AS users_age_bucket, users.city AS users_city, users.stake AS users_stake, users.lat AS users_lat, users.lon AS users_lon, users.bio AS users_bio, users.wants_adjacent_bucket AS users_wants_adjacent_bucket, users.marital_status AS users_marital_status, users.has_children AS users_has_children, users.body_type AS users_body_type, users.photo_path AS users_photo_path, users.photo_key AS users_photo_key, users.email_verified AS users_email_verified, users.email_verification_token_hash AS users_email_verification_token_hash, users.email_verification_expires_at AS users_email_verification_expires_at, users.email_verification_link_token AS users_email_verification_link_token, users.email_verification_link_expires_at AS users_email_verification_link_expires_at, users.email_verification_link_used AS users_email_verification_link_used, users.created_at AS users_created_at, users.updated_at AS users_updated_at
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]FROM users
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]WHERE users.email = ?
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m] LIMIT ? OFFSET ?]
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][parameters: ('test@test.com', 1, 0)]
+[2m2026-01-26T03:01:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m](Background on this error at: https://sqlalche.me/e/20/e3q8)
+[2m2026-01-26T03:07:25Z[0m proxy[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]App celestya-backend has excess capacity, autostopping machine d894677b4d6d78. 0 out of 1 machines left running (region=dfw, process group=app)
+[2m2026-01-26T03:07:25Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Sending signal SIGINT to main child process w/ PID 650
+[2m2026-01-26T03:07:25Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Shutting down
+[2m2026-01-26T03:07:25Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Waiting for application shutdown.
+[2m2026-01-26T03:07:25Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Application shutdown complete.
+[2m2026-01-26T03:07:25Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Finished server process [650]
+[2m2026-01-26T03:07:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Main child exited normally with code: 0
+[2m2026-01-26T03:07:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Starting clean up.
+[2m2026-01-26T03:07:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Umounting /dev/vdc from /data
+[2m2026-01-26T03:07:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][  366.395938] reboot: Restarting system
+[2m2026-01-26T03:22:12Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]2026-01-26T03:22:12.303041054 [01KFW2V59Y25Y33DPFHHA4HFKM:main] Running Firecracker v1.12.1
+[2m2026-01-26T03:22:12Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]2026-01-26T03:22:12.303245131 [01KFW2V59Y25Y33DPFHHA4HFKM:main] Listening on API socket ("/fc.sock").
+[2m2026-01-26T03:22:13Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Starting init (commit: 6f59af0a)...
+[2m2026-01-26T03:22:13Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Checking filesystem on /data
+[2m2026-01-26T03:22:13Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]/dev/vdc: clean, 14/64512 files, 8886/258048 blocks
+[2m2026-01-26T03:22:13Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Mounting /dev/vdc at /data w/ uid: 0, gid: 0 and chmod 0755
+[2m2026-01-26T03:22:13Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Resized /data to 1056964608 bytes
+[2m2026-01-26T03:22:13Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Preparing to run: `uvicorn app.main:app --host 0.0.0.0 --port 8080` as root
+[2m2026-01-26T03:22:13Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m [fly api proxy] listening at /.fly/api
+[2m2026-01-26T03:22:13Z[0m runner[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]Machine started in 1.195s
+[2m2026-01-26T03:22:13Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]2026/01/26 03:22:13 INFO SSH listening listen_address=[fdaa:3d:fb4:a7b:5d2:ed24:1062:2]:22
+[2m2026-01-26T03:22:15Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][DB] Iniciando migraciones manuales...
+[2m2026-01-26T03:22:15Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][DB] Columna email_verification_link_token ya existe.
+[2m2026-01-26T03:22:15Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][DB] Columna email_verification_link_expires_at ya existe.
+[2m2026-01-26T03:22:15Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][DB] Columna email_verification_link_used ya existe.
+[2m2026-01-26T03:22:15Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][DB] Migraciones finalizadas.
+[2m2026-01-26T03:22:16Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Started server process [651]
+[2m2026-01-26T03:22:16Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Waiting for application startup.
+[2m2026-01-26T03:22:16Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Application startup complete.
+[2m2026-01-26T03:22:16Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+[2m2026-01-26T03:22:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]2026/01/26 03:22:26 INFO New SSH session email=miguel.tovar.amaral@gmail.com verified=true
+[2m2026-01-26T03:23:20Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Sending signal SIGINT to main child process w/ PID 651
+[2m2026-01-26T03:23:21Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Shutting down
+[2m2026-01-26T03:23:21Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Waiting for application shutdown.
+[2m2026-01-26T03:23:21Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Application shutdown complete.
+[2m2026-01-26T03:23:21Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Finished server process [651]
+[2m2026-01-26T03:23:21Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Main child exited normally with code: 0
+[2m2026-01-26T03:23:21Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Starting clean up.
+[2m2026-01-26T03:23:21Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Umounting /dev/vdc from /data
+[2m2026-01-26T03:23:21Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][   69.027831] reboot: Restarting system
+[2m2026-01-26T03:23:22Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]2026-01-26T03:23:22.334399053 [01KFW2V59Y25Y33DPFHHA4HFKM:main] Running Firecracker v1.12.1
+[2m2026-01-26T03:23:22Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]2026-01-26T03:23:22.334597670 [01KFW2V59Y25Y33DPFHHA4HFKM:main] Listening on API socket ("/fc.sock").
+[2m2026-01-26T03:23:23Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Starting init (commit: 6f59af0a)...
+[2m2026-01-26T03:23:23Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Checking filesystem on /data
+[2m2026-01-26T03:23:23Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]/dev/vdc: clean, 14/64512 files, 8886/258048 blocks
+[2m2026-01-26T03:23:23Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Mounting /dev/vdc at /data w/ uid: 0, gid: 0 and chmod 0755
+[2m2026-01-26T03:23:23Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Resized /data to 1056964608 bytes
+[2m2026-01-26T03:23:23Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Preparing to run: `uvicorn app.main:app --host 0.0.0.0 --port 8080` as root
+[2m2026-01-26T03:23:23Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m [fly api proxy] listening at /.fly/api
+[2m2026-01-26T03:23:23Z[0m runner[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]Machine started in 1.36s
+[2m2026-01-26T03:23:23Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]2026/01/26 03:23:23 INFO SSH listening listen_address=[fdaa:3d:fb4:a7b:5d2:ed24:1062:2]:22
+[2m2026-01-26T03:23:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][DB] Iniciando migraciones manuales...
+[2m2026-01-26T03:23:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][DB] Columna email_verification_link_token ya existe.
+[2m2026-01-26T03:23:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][DB] Columna email_verification_link_expires_at ya existe.
+[2m2026-01-26T03:23:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][DB] Columna email_verification_link_used ya existe.
+[2m2026-01-26T03:23:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][DB] Migraciones finalizadas.
+[2m2026-01-26T03:23:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Started server process [650]
+[2m2026-01-26T03:23:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Waiting for application startup.
+[2m2026-01-26T03:23:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Application startup complete.
+[2m2026-01-26T03:23:26Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+[2m2026-01-26T03:28:34Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]2026/01/26 03:28:34 INFO New SSH session email=miguel.tovar.amaral@gmail.com verified=true
+[2m2026-01-26T03:29:37Z[0m proxy[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]App celestya-backend has excess capacity, autostopping machine d894677b4d6d78. 0 out of 1 machines left running (region=dfw, process group=app)
+[2m2026-01-26T03:29:37Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Sending signal SIGINT to main child process w/ PID 650
+[2m2026-01-26T03:29:37Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Shutting down
+[2m2026-01-26T03:29:37Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Waiting for application shutdown.
+[2m2026-01-26T03:29:37Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Application shutdown complete.
+[2m2026-01-26T03:29:37Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Finished server process [650]
+[2m2026-01-26T03:29:38Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Main child exited normally with code: 0
+[2m2026-01-26T03:29:38Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Starting clean up.
+[2m2026-01-26T03:29:38Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Umounting /dev/vdc from /data
+[2m2026-01-26T03:29:38Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][  376.390617] reboot: Restarting system
+[2m2026-01-26T03:32:36Z[0m proxy[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]Starting machine
+[2m2026-01-26T03:32:37Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]2026-01-26T03:32:37.205809956 [01KFW2V59Y25Y33DPFHHA4HFKM:main] Running Firecracker v1.12.1
+[2m2026-01-26T03:32:37Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]2026-01-26T03:32:37.206023894 [01KFW2V59Y25Y33DPFHHA4HFKM:main] Listening on API socket ("/fc.sock").
+[2m2026-01-26T03:32:38Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Starting init (commit: 6f59af0a)...
+[2m2026-01-26T03:32:38Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Checking filesystem on /data
+[2m2026-01-26T03:32:38Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]/dev/vdc: clean, 14/64512 files, 8886/258048 blocks
+[2m2026-01-26T03:32:38Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Mounting /dev/vdc at /data w/ uid: 0, gid: 0 and chmod 0755
+[2m2026-01-26T03:32:38Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Resized /data to 1056964608 bytes
+[2m2026-01-26T03:32:38Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m Preparing to run: `uvicorn app.main:app --host 0.0.0.0 --port 8080` as root
+[2m2026-01-26T03:32:38Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][32m INFO[0m [fly api proxy] listening at /.fly/api
+[2m2026-01-26T03:32:38Z[0m runner[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]Machine started in 1.363s
+[2m2026-01-26T03:32:38Z[0m proxy[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]machine started in 1.493655879s
+[2m2026-01-26T03:32:38Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]2026/01/26 03:32:38 INFO SSH listening listen_address=[fdaa:3d:fb4:a7b:5d2:ed24:1062:2]:22
+[2m2026-01-26T03:32:40Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][DB] Iniciando migraciones manuales...
+[2m2026-01-26T03:32:40Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][DB] Columna email_verification_link_token ya existe.
+[2m2026-01-26T03:32:40Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][DB] Columna email_verification_link_expires_at ya existe.
+[2m2026-01-26T03:32:40Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][DB] Columna email_verification_link_used ya existe.
+[2m2026-01-26T03:32:40Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m][DB] Migraciones finalizadas.
+[2m2026-01-26T03:32:40Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Started server process [649]
+[2m2026-01-26T03:32:40Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Waiting for application startup.
+[2m2026-01-26T03:32:40Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Application startup complete.
+[2m2026-01-26T03:32:41Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+[2m2026-01-26T03:32:41Z[0m proxy[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]machine became reachable in 3.307615173s
+[2m2026-01-26T03:32:42Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     172.16.36.74:56536 - "POST /auth/register HTTP/1.1" 200 OK
+[2m2026-01-26T03:33:08Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     172.16.36.74:42970 - "POST /auth/verify-email HTTP/1.1" 200 OK
+[2m2026-01-26T03:33:08Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     172.16.36.74:42978 - "GET /chats HTTP/1.1" 200 OK
+[2m2026-01-26T03:33:20Z[0m app[d894677b4d6d78] [32mdfw[0m [[34minfo[0m]INFO:     172.16.36.74:61622 - "GET /users/me/quiz-answers HTTP/1.1" 200 OK

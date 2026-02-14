@@ -1,48 +1,22 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/auth_provider.dart';
 import '../services/sync_service.dart';
 import 'login_screen.dart';
+import 'verify_code_screen.dart';
+import '../app_shell.dart';
 
-class AuthGate extends StatefulWidget {
+class AuthGate extends ConsumerWidget {
   const AuthGate({super.key});
 
-  @override
-  State<AuthGate> createState() => _AuthGateState();
-}
-
-class _AuthGateState extends State<AuthGate> {
-  bool _isLoading = true;
-  bool _isAuthenticated = false;
 
   @override
-  void initState() {
-    super.initState();
-    _checkAuth();
-  }
-
-  Future<void> _checkAuth() async {
-    // Intentar login automático
-    final success = await AuthService.tryAutoLogin();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authProvider);
     
-    if (mounted) {
-      if (success) {
-        // Disparar sincronización inteligente (Prompt 5)
-        SyncService.triggerSync();
-        
-        // Si el login es exitoso, navegar a la app principal
-        Navigator.pushReplacementNamed(context, '/app');
-      } else {
-        // Si falla, mostrar pantalla de login
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
+    print('[AuthGate] Building with status: ${authState.status}, email: ${authState.email}');
 
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) {
+    if (authState.isLoading) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
@@ -50,7 +24,18 @@ class _AuthGateState extends State<AuthGate> {
       );
     }
 
-    // Si no está cargando y no navegó (falló login), mostrar LoginScreen
-    return const LoginScreen();
+    switch (authState.status) {
+      case AuthStatus.loggedIn:
+        print('[AuthGate] Showing AppShell');
+        // Disparar sincronización inteligente
+        SyncService.triggerSync();
+        return const AppShell(); // Or wherever /app leads
+      case AuthStatus.pendingVerification:
+        print('[AuthGate] Showing VerifyCodeScreen for ${authState.email}');
+        return VerifyCodeScreen(email: authState.email ?? "");
+      case AuthStatus.loggedOut:
+        print('[AuthGate] Showing LoginScreen');
+        return const LoginScreen();
+    }
   }
 }

@@ -4,12 +4,18 @@ import hashlib
 from datetime import datetime, timedelta, timezone
 
 from passlib.context import CryptContext
-from jose import jwt
+from jose import jwt, JWTError
 
 
-SECRET_KEY = os.getenv("SECRET_KEY", "change-this-please")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "2880"))
-ALGO = "HS256"
+# ============================
+# ✅ JWT CONFIG (UNIFICADO)
+# ============================
+JWT_SECRET = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY") or ""
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "2880"))  # 48h
+
+if not JWT_SECRET:
+    raise RuntimeError("JWT secret missing: set JWT_SECRET (or SECRET_KEY) in environment.")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -19,11 +25,8 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # ----------------------------
 def hash_password(raw: str) -> str:
     raw = (raw or "").strip()
-
-    # bcrypt límite: 72 bytes
     if len(raw.encode("utf-8")) > 72:
         raise ValueError("La contraseña no puede exceder 72 bytes (límite bcrypt).")
-
     return pwd_context.hash(raw)
 
 
@@ -35,34 +38,38 @@ def verify_password(raw: str, hashed: str) -> bool:
 # JWT helpers
 # ----------------------------
 def utcnow() -> datetime:
-    # ✅ SIEMPRE aware en UTC
     return datetime.now(timezone.utc)
 
 
 def create_access_token(sub: int) -> str:
+    """
+    ✅ IMPORTANTE: `sub` DEBE ser string para python-jose.
+    """
     exp = utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-
-    # jose puede aceptar datetime o timestamp; dejamos timestamp int
     to_encode = {
-        "sub": int(sub),
+        "sub": str(int(sub)),            # ✅ string
         "exp": int(exp.timestamp()),
     }
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGO)
+    return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
 def decode_token(token: str) -> int:
-    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGO])
-    return int(payload["sub"])
+    """
+    Devuelve user_id como int.
+    """
+    payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    sub = payload.get("sub")
+    if sub is None:
+        raise JWTError("Missing 'sub' in token")
+    return int(sub)
 
 
 # ----------------------------
 # Email verification helpers
 # ----------------------------
 def make_token() -> str:
-    # token largo, seguro para enviar por URL (si usas links)
     return secrets.token_urlsafe(32)
 
 
 def hash_token(token: str) -> str:
-    # guardas el hash, no el token plano
     return hashlib.sha256(token.encode("utf-8")).hexdigest()

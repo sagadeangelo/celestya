@@ -2,94 +2,107 @@ import os
 import json
 import urllib.request
 import urllib.error
-from email.mime.text import MIMEText
-import smtplib
+import logging
 
-# ============ RESEND ============
+logger = logging.getLogger("app.emailer")
+
+class ResendError(Exception):
+    def __init__(self, status_code: int, body: str):
+        self.status_code = status_code
+        self.body = body
+        super().__init__(f"Resend Failure {status_code}: {body}")
+
+# ============ CONFIGURATION ============
+EMAIL_ENABLED_RAW = os.getenv("EMAIL_ENABLED", "true")
+EMAIL_ENABLED = EMAIL_ENABLED_RAW.lower() not in ("false", "0", "no", "off")
+
+# FORZAMOS from logic
+ENV = os.getenv("ENV", "production").lower()
+VERIFIED_DOMAIN = "lasagadeangelo.com.mx"
+DEFAULT_FROM = f"Celestya <no-reply@{VERIFIED_DOMAIN}>"
+MAIL_FROM = os.getenv("MAIL_FROM", "").strip() or DEFAULT_FROM
+
+# Validación de seguridad: el dominio debe ser el verificado
+if VERIFIED_DOMAIN not in MAIL_FROM:
+    logger.error(f"MAIL_FROM '{MAIL_FROM}' no pertenece al dominio verificado {VERIFIED_DOMAIN}. Usando default.")
+    print(f"[ERROR EMAILER] Dominio inválido en MAIL_FROM: {MAIL_FROM}. Usando default.")
+    MAIL_FROM = DEFAULT_FROM
+
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
-RESEND_FROM = os.getenv("RESEND_FROM", "").strip()  # "Nombre <correo@dominio>"
 RESEND_ENDPOINT = "https://api.resend.com/emails"
 
-# ============ SMTP (fallback opcional) ============
-SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "").strip()
-SMTP_PASS = os.getenv("SMTP_PASS", "").strip()
-SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
-MAIL_FROM = os.getenv("MAIL_FROM", "").strip() or SMTP_USER or "no-reply@localhost"
+logger.info(f"Email configuration: EMAIL_ENABLED={EMAIL_ENABLED}, MAIL_FROM='{MAIL_FROM}', KEY_SET={bool(RESEND_API_KEY)}")
+print(f"[DEBUG EMAILER] Init: EMAIL_ENABLED={EMAIL_ENABLED}, MAIL_FROM='{MAIL_FROM}', KEY_SET={bool(RESEND_API_KEY)}")
 
 
 def _send_email_resend(to_email: str, subject: str, html: str):
     if not RESEND_API_KEY:
+        logger.error("RESEND_API_KEY no está configurado")
         raise RuntimeError("RESEND_API_KEY no está configurado")
 
-    if not RESEND_FROM:
-        raise RuntimeError("RESEND_FROM no está configurado (ej: Celestya <celestya@tu-dominio.com>)")
-
     payload = {
-        "from": RESEND_FROM,
+        "from": MAIL_FROM,
         "to": [to_email],
         "subject": subject,
         "html": html,
     }
 
+    logger.info(f"Resend Request: provider=resend, from='{MAIL_FROM}', to='{to_email}', subject='{subject}'")
+
     data = json.dumps(payload).encode("utf-8")
+
+    headers = {
+        "Authorization": f"Bearer {RESEND_API_KEY}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "CelestyaBackend/1.0 (+https://lasagadeangelo.com.mx)",
+    }
+
     req = urllib.request.Request(
         RESEND_ENDPOINT,
         data=data,
         method="POST",
-        headers={
-            "Authorization": f"Bearer {RESEND_API_KEY}",
-            "Content-Type": "application/json",
-        },
+        headers=headers,
     )
 
     try:
         with urllib.request.urlopen(req, timeout=20) as resp:
+            status_code = resp.getcode()
             body = resp.read().decode("utf-8", errors="ignore")
-            # útil para debug
-            print("[RESEND] status:", resp.status, "resp:", body[:300])
-            return body
+            res_json = json.loads(body)
+            msg_id = res_json.get("id")
+            logger.info(f"Resend Response Success: status={status_code}, provider=resend, message_id={msg_id}")
+            return res_json
+
     except urllib.error.HTTPError as e:
+        status_code = e.code
         body = e.read().decode("utf-8", errors="ignore")
-        raise RuntimeError(f"Resend HTTPError {e.code}: {body}") from e
+        logger.error(f"Resend Response Failure: status={status_code}, body={body}")
+        raise ResendError(status_code, body) from e
 
-
-def _send_email_smtp(to_email: str, subject: str, html: str):
-    if not SMTP_HOST:
-        raise RuntimeError("SMTP_HOST no está configurado")
-
-    msg = MIMEText(html, "html", "utf-8")
-    msg["Subject"] = subject
-    msg["From"] = MAIL_FROM
-    msg["To"] = to_email
-
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as server:
-        if SMTP_USE_TLS:
-            server.starttls()
-        if SMTP_USER:
-            server.login(SMTP_USER, SMTP_PASS)
-        server.sendmail(MAIL_FROM, [to_email], msg.as_string())
+    except Exception as e:
+        logger.error(f"Unexpected error in _send_email_resend: {str(e)}")
+        raise
 
 
 def send_email(to_email: str, subject: str, html: str):
     """
-    Prioridad:
-    1) Resend si hay RESEND_API_KEY
-    2) SMTP si hay SMTP_HOST
-    3) Dev: imprimir y no truena
+    Sends email strictly via Resend. Legacy SMTP fallback removed to ensure 
+    delivery consistency and explicit failure reporting.
     """
-    # 1) Resend
-    if RESEND_API_KEY:
-        return _send_email_resend(to_email, subject, html)
+    print(f"[DEBUG EMAILER] Entering send_email to={to_email}, enabled={EMAIL_ENABLED}")
+    if not EMAIL_ENABLED:
+        logger.info(f"EMAIL_ENABLED=false; skip sending to={to_email}")
+        print(f"[DEBUG EMAILER] Skipped because EMAIL_ENABLED=false")
+        return {"sent": False, "skipped": True}
 
-    # 2) SMTP fallback
-    if SMTP_HOST:
-        return _send_email_smtp(to_email, subject, html)
+    if not RESEND_API_KEY:
+        logger.error("No RESEND_API_KEY configured. Cannot send email.")
+        print(f"[DEBUG EMAILER] Error: RESEND_API_KEY missing")
+        return {"sent": False, "error": "No email provider configured"}
 
-    # 3) Dev mode
-    print("⚠️ Email no enviado (no hay RESEND_API_KEY ni SMTP_HOST).")
-    print("To:", to_email)
-    print("Subject:", subject)
-    print("HTML:", html[:500])
-    return None
+    print(f"[DEBUG EMAILER] Calling _send_email_resend...")
+    res = _send_email_resend(to_email, subject, html)
+    print(f"[DEBUG EMAILER] _send_email_resend success, id={res.get('id')}")
+    return {"sent": True, "provider": "resend", "id": res.get("id")}
+

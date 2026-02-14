@@ -1,0 +1,71 @@
+# --- Git / IDE ---
+.git
+.gitignore
+.vscode
+.idea
+*.swp
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+*.log
+
+# --- Media / uploads / local data ---
+media/
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Flutter / Android / iOS / builds (si tu repo mezcla cosas) ---
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+android/.gradle/
+android/app/build/
+ios/Pods/
+ios/build/
+macos/Pods/
+windows/
+
+# --- Node / web ---
+node_modules/
+dist/
+out/
+.next/
+
+# --- Archivos pesados típicos ---
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.iso
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.png
+*.jpg
+*.jpeg
+*.webp
+
+# Si tienes exportaciones o assets gigantes
+EXPORTADOS_FILMORA/
