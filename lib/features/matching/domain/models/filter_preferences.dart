@@ -11,18 +11,18 @@ class FilterPreferences {
   // lifestyle & Físico
   final double? minHeight; // en cm
   final String? exerciseFrequency; // 'Ocasional', 'Regular', 'Diario'
-  
+
   // Intereses (Tags)
   final List<String> selectedInterests;
   final List<String> bodyTypes; // Filtro por complexión
-  
+
   // Nuevo: Estado Civil y Hijos
-  final List<String> maritalStatus; 
+  final List<String> maritalStatus;
   final String? childrenPreference; // 'con_hijos', 'sin_hijos', o null (ambos)
 
   const FilterPreferences({
     this.ageRange = const RangeValues(18, 35),
-    this.maxDistance = 50.0,
+    this.maxDistance = 40000.0,
     this.minHeight,
     this.exerciseFrequency,
     this.selectedInterests = const [],

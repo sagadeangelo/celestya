@@ -1,12 +1,11 @@
 // lib/screens/matches_screen.dart
-import 'dart:math' as math;
 import 'package:appinio_swiper/appinio_swiper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/match_candidate.dart';
-import '../features/matching/presentation/providers/filter_provider.dart';
+
 import '../features/matching/presentation/widgets/filter_bottom_sheet.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/premium_match_card.dart';
@@ -21,10 +20,10 @@ import '../features/profile/presentation/providers/profile_provider.dart';
 const String kMockUserPhotoUrl =
     'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1887&auto=format&fit=crop';
 
-/// Provider: carga sugerencias desde backend
-final suggestedMatchesProvider =
+/// Provider: carga MATCHES CONFIRMADOS desde backend
+final confirmedMatchesProvider =
     FutureProvider.autoDispose<List<MatchCandidate>>((ref) async {
-  return MatchesApi.getSuggested();
+  return MatchesApi.getConfirmed();
 });
 
 class MatchesScreen extends ConsumerStatefulWidget {
@@ -56,102 +55,30 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
   }
 
   void _handleLike(MatchCandidate m) {
-    // Si tu función showMatchAnimation vive en otro archivo, déjala igual.
-    // Aquí solo la llamamos si existe en tu proyecto.
+    // Get current user profile
+    final userProfile = ref.read(profileProvider).asData?.value;
+    final userPhotoUrl = userProfile?.photoUrls.firstOrNull ?? '';
+
     try {
       // ignore: undefined_function
       showMatchAnimation(
         context: context,
-        userPhotoUrl: kMockUserPhotoUrl,
+        userPhotoUrl:
+            userPhotoUrl.isNotEmpty ? userPhotoUrl : kMockUserPhotoUrl,
         matchPhotoUrl: m.photoUrl ?? '',
         matchName: m.name,
       );
     } catch (_) {}
   }
 
-  double _calculateDistance(
-      double lat1, double lon1, double lat2, double lon2) {
-    const p = 0.017453292519943295;
-    final a = 0.5 -
-        math.cos((lat2 - lat1) * p) / 2 +
-        math.cos(lat1 * p) *
-            math.cos(lat2 * p) *
-            (1 - math.cos((lon2 - lon1) * p)) /
-            2;
-    return 12742 * math.asin(math.sqrt(a));
-  }
-
-  List<MatchCandidate> _applyFilters(List<MatchCandidate> base, dynamic filters,
-      double? userLat, double? userLon) {
-    return base.where((c) {
-      // 0) Distancia (Mundial = 300+)
-      if (filters.maxDistance < 300) {
-        if (userLat != null &&
-            userLon != null &&
-            c.latitude != null &&
-            c.longitude != null) {
-          final dist =
-              _calculateDistance(userLat, userLon, c.latitude!, c.longitude!);
-          if (dist > filters.maxDistance) return false;
-        }
-      }
-
-      // 1) Edad
-      if (c.age != null &&
-          (c.age! < filters.ageRange.start || c.age! > filters.ageRange.end)) {
-        return false;
-      }
-
-      // 2) Altura
-      if (filters.minHeight != null && c.height < filters.minHeight!)
-        return false;
-
-      // 3) Ejercicio
-      if (filters.exerciseFrequency != null &&
-          c.exercise != filters.exerciseFrequency) {
-        return false;
-      }
-
-      // 4) Complexión
-      if (filters.bodyTypes.isNotEmpty) {
-        if (c.bodyType == null || !filters.bodyTypes.contains(c.bodyType))
-          return false;
-      }
-
-      // 5) Estado Civil
-      if (filters.maritalStatus.isNotEmpty) {
-        if (c.maritalStatus == null ||
-            !filters.maritalStatus.contains(c.maritalStatus)) {
-          return false;
-        }
-      }
-
-      // 6) Hijos
-      if (filters.childrenPreference != null) {
-        if (filters.childrenPreference == 'con_hijos') {
-          if (c.hasChildren != true) return false;
-        } else if (filters.childrenPreference == 'sin_hijos') {
-          if (c.hasChildren != false) return false;
-        }
-      }
-
-      // 7) Intereses: al menos uno
-      if (filters.selectedInterests.isNotEmpty) {
-        final hasCommon =
-            c.interests.any((i) => filters.selectedInterests.contains(i));
-        if (!hasCommon) return false;
-      }
-
-      return true;
-    }).toList();
-  }
+  // REMOVED: Filter logic no longer needed in MatchesScreen
+  // MatchesScreen shows ONLY confirmed matches, no filtering required
 
   @override
   Widget build(BuildContext context) {
-    final filters = ref.watch(filterProvider);
-    final suggestedAsync = ref.watch(suggestedMatchesProvider);
+    final confirmedAsync = ref.watch(confirmedMatchesProvider);
 
-    return suggestedAsync.when(
+    return confirmedAsync.when(
       loading: () => Scaffold(
         extendBodyBehindAppBar: true,
         appBar: AppBar(
@@ -202,31 +129,22 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                 title: 'No pudimos cargar sugerencias',
                 message: 'Revisa tu conexión o el backend.\n\nError: $e',
                 actionLabel: 'Reintentar',
-                onAction: () => ref.refresh(suggestedMatchesProvider),
+                onAction: () => ref.refresh(confirmedMatchesProvider),
               ),
             ),
           ],
         ),
       ),
-      data: (backendCandidates) {
-        final profile = ref.watch(profileProvider).value;
-        final filteredCandidates = _applyFilters(
-          backendCandidates,
-          filters,
-          profile?.latitude,
-          profile?.longitude,
-        );
+      data: (confirmedMatches) {
+        // No filtering - just show confirmed matches as-is
 
-        if (filteredCandidates.isEmpty) {
+        if (confirmedMatches.isEmpty) {
           return Scaffold(
             extendBodyBehindAppBar: true,
             appBar: AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
-              leading: IconButton(
-                icon: const Icon(Icons.tune_rounded, color: Colors.white),
-                onPressed: () => _showFilters(context),
-              ),
+              // No filter button
             ),
             body: Stack(
               children: [
@@ -239,12 +157,12 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                 ),
                 Center(
                   child: EmptyState(
-                    icon: Icons.hourglass_empty_rounded,
-                    title: 'Las conexiones importantes toman tiempo',
+                    icon: Icons.favorite_border_rounded,
+                    title: 'Aún no tienes matches',
                     message:
-                        'El universo está alineando las estrellas.\nMientras tanto, puedes ajustar tus preferencias.',
-                    actionLabel: 'Ampliar búsqueda',
-                    onAction: () => _showFilters(context),
+                        'Ve a Descubrir para encontrar personas que te gusten.\nCuando haya un match mutuo, aparecerán aquí.',
+                    actionLabel: null,
+                    onAction: null,
                   ),
                 ),
               ],
@@ -255,21 +173,17 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
         return Scaffold(
           extendBodyBehindAppBar: true,
           appBar: AppBar(
-            title: const Text('Descubrir',
+            title: const Text('Matches',
                 style: TextStyle(fontWeight: FontWeight.w300)),
             centerTitle: true,
             backgroundColor: Colors.transparent,
             elevation: 0,
-            leading: IconButton(
-              style: IconButton.styleFrom(backgroundColor: Colors.black12),
-              icon: const Icon(Icons.tune_rounded, color: Colors.white),
-              onPressed: () => _showFilters(context),
-            ),
+            // No filter button for confirmed matches
             actions: [
               IconButton(
                 style: IconButton.styleFrom(backgroundColor: Colors.black12),
                 icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-                onPressed: () => ref.refresh(suggestedMatchesProvider),
+                onPressed: () => ref.refresh(confirmedMatchesProvider),
               ),
             ],
           ),
@@ -287,9 +201,9 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
               ),
               Positioned.fill(
                 child: AppinioSwiper(
-                  key: ValueKey(filteredCandidates.length + filters.hashCode),
+                  key: ValueKey(confirmedMatches.length),
                   controller: _swiperController,
-                  cardCount: filteredCandidates.length,
+                  cardCount: confirmedMatches.length,
                   swipeOptions: const SwipeOptions.only(
                     left: true,
                     right: true,
@@ -312,18 +226,18 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                     final act = activity.toString().toLowerCase();
                     if (act.contains('right')) {
                       final swiped =
-                          (prev >= 0 && prev < filteredCandidates.length)
-                              ? filteredCandidates[prev]
+                          (prev >= 0 && prev < confirmedMatches.length)
+                              ? confirmedMatches[prev]
                               : null;
                       if (swiped != null) _handleLike(swiped);
                     }
                   },
                   onEnd: () {
                     // Si se acabó el stack, recarga
-                    ref.refresh(suggestedMatchesProvider);
+                    ref.refresh(confirmedMatchesProvider);
                   },
                   cardBuilder: (context, index) {
-                    final candidate = filteredCandidates[index];
+                    final candidate = confirmedMatches[index];
                     final card = PremiumMatchCard(candidate: candidate);
 
                     final double opacity =
@@ -393,8 +307,8 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                       onPressed: () {
                         HapticFeedback.mediumImpact();
                         final current = (_activeIndex >= 0 &&
-                                _activeIndex < filteredCandidates.length)
-                            ? filteredCandidates[_activeIndex]
+                                _activeIndex < confirmedMatches.length)
+                            ? confirmedMatches[_activeIndex]
                             : null;
                         if (current != null) _handleLike(current);
                         _swiperController.swipeRight();

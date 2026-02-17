@@ -5,6 +5,7 @@ import '../../../../data/user_profile.dart';
 import '../../domain/models/filter_preferences.dart';
 import '../providers/filter_provider.dart';
 import '../../../../features/profile/presentation/providers/profile_provider.dart';
+import '../../../../providers/discover_provider.dart';
 
 class FilterBottomSheet extends ConsumerStatefulWidget {
   const FilterBottomSheet({super.key});
@@ -25,6 +26,8 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
 
   void _applyFilters() {
     ref.read(filterProvider.notifier).setFilters(_localFilters);
+    // Reload candidates with new filters
+    ref.read(discoverProvider.notifier).loadCandidates(forceRefresh: true);
     Navigator.pop(context);
   }
 
@@ -131,7 +134,9 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
                     ),
                   ),
                 Slider(
-                  value: _localFilters.maxDistance,
+                  value: _localFilters.maxDistance > 300
+                      ? 300
+                      : _localFilters.maxDistance,
                   min: 10,
                   max: 300,
                   divisions: 29,
@@ -141,8 +146,10 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
                       : '${_localFilters.maxDistance.round()} km',
                   onChanged: hasLocation
                       ? (value) {
+                          // Map 300 (max slider) to 40000 (Earth circumference ~ global)
+                          final distance = value >= 300 ? 40000.0 : value;
                           setState(() => _localFilters =
-                              _localFilters.copyWith(maxDistance: value));
+                              _localFilters.copyWith(maxDistance: distance));
                         }
                       : null, // Disabled if no location
                 ),

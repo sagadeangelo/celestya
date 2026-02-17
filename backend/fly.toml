@@ -8,8 +8,8 @@ primary_region = "dfw"
   internal_port = 8080
   force_https = true
   auto_start_machines = true
-  auto_stop_machines = true
-  min_machines_running = 0
+  auto_stop_machines = false
+  min_machines_running = 1
   processes = ["app"]
 
 [checks]
@@ -21,7 +21,6 @@ primary_region = "dfw"
     interval = "30s"
     timeout = "10s"
     grace_period = "20s"
-
 
 [[mounts]]
   source = "celestya_data"

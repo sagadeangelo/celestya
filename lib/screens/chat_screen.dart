@@ -11,11 +11,11 @@ import '../utils/snackbar_helper.dart';
 class ChatScreen extends ConsumerStatefulWidget {
   final int chatId;
   final String peerName;
-  final int? peerId; 
+  final int? peerId;
 
   const ChatScreen({
-    super.key, 
-    required this.chatId, 
+    super.key,
+    required this.chatId,
     required this.peerName,
     this.peerId,
   });
@@ -37,7 +37,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _sendMessage() {
     if (_textController.text.trim().isEmpty) return;
-    ref.read(messagesProvider(widget.chatId).notifier).sendMessage(_textController.text);
+    ref
+        .read(messagesProvider(widget.chatId).notifier)
+        .sendMessage(_textController.text);
     _textController.clear();
   }
 
@@ -47,17 +49,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final theme = Theme.of(context);
 
     // Find peer photo if available (from list provider, as it's not passed directly fully)
-    // For now we just use the name passed. 
+    // For now we just use the name passed.
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text(
           widget.peerName,
-          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          style:
+              theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: Colors.transparent, 
+        backgroundColor: Colors.transparent,
         elevation: 0,
         flexibleSpace: ClipRect(
           child: BackdropFilter(
@@ -96,7 +99,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   children: [
                     Icon(Icons.block, color: Colors.red, size: 20),
                     SizedBox(width: 8),
-                    Text('Bloquear usuario', style: TextStyle(color: Colors.red)),
+                    Text('Bloquear usuario',
+                        style: TextStyle(color: Colors.red)),
                   ],
                 ),
               ),
@@ -112,27 +116,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           children: [
             Expanded(
               child: state.messages.isEmpty && state.isLoading
-                ? const Center(child: CircularProgressIndicator(color: CelestyaColors.celestialBlue))
-                : ListView.builder(
-                    controller: _scrollController,
-                    reverse: true, // Start from bottom
-                    padding: const EdgeInsets.only(left: 16, right: 16, top: 100, bottom: 20),
-                    itemCount: state.messages.length + (state.hasMore ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == state.messages.length) {
-                        ref.read(messagesProvider(widget.chatId).notifier).loadMore();
-                        return const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white54)),
-                        );
-                      }
-                      final msg = state.messages[index];
-                      // Safe approach: We know "peer". If sender_id == peerId -> Peer. Else -> Me.
-                      final isMe = widget.peerId != null ? (msg.senderId != widget.peerId) : true; 
-                      
-                      return _Bubble(message: msg, isMe: isMe, theme: theme);
-                    },
-                  ),
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                          color: CelestyaColors.celestialBlue))
+                  : ListView.builder(
+                      controller: _scrollController,
+                      reverse: true, // Start from bottom
+                      padding: const EdgeInsets.only(
+                          left: 16, right: 16, top: 100, bottom: 20),
+                      itemCount:
+                          state.messages.length + (state.hasMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == state.messages.length) {
+                          ref
+                              .read(messagesProvider(widget.chatId).notifier)
+                              .loadMore();
+                          return const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Center(
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white54)),
+                          );
+                        }
+                        final msg = state.messages[index];
+                        // Safe approach: We know "peer". If sender_id == peerId -> Peer. Else -> Me.
+                        final isMe = widget.peerId != null
+                            ? (msg.senderId != widget.peerId)
+                            : true;
+
+                        return _Bubble(message: msg, isMe: isMe, theme: theme);
+                      },
+                    ),
             ),
             _buildInputArea(theme),
           ],
@@ -143,14 +157,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _confirmBlock(BuildContext context) {
     if (widget.peerId == null) return;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('¿Bloquear usuario?'),
-        content: const Text('Dejarás de ver este chat y al usuario en toda la aplicación.'),
+        content: const Text(
+            'Dejarás de ver este chat y al usuario en toda la aplicación.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar')),
           TextButton(
             onPressed: () async {
               try {
@@ -161,7 +178,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   SnackbarHelper.showSuccess(context, 'Usuario bloqueado');
                 }
               } catch (e) {
-                if (context.mounted) SnackbarHelper.showError(context, 'Error al bloquear');
+                if (context.mounted)
+                  SnackbarHelper.showError(context, 'Error al bloquear');
               }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -184,30 +202,40 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           title: const Text('Reportar usuario'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            children: reasons.map((r) => RadioListTile<String>(
-              title: Text(r),
-              value: r,
-              groupValue: selectedReason,
-              onChanged: (val) => setDialogState(() => selectedReason = val),
-            )).toList(),
+            children: reasons
+                .map((r) => RadioListTile<String>(
+                      title: Text(r),
+                      value: r,
+                      groupValue: selectedReason,
+                      onChanged: (val) =>
+                          setDialogState(() => selectedReason = val),
+                    ))
+                .toList(),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
             TextButton(
-              onPressed: selectedReason == null ? null : () async {
-                try {
-                  await SafetyApi.reportUser(
-                    targetUserId: widget.peerId!, 
-                    reason: selectedReason!,
-                  );
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    SnackbarHelper.showSuccess(context, 'Reporte enviado');
-                  }
-                } catch (e) {
-                  if (context.mounted) SnackbarHelper.showError(context, 'Error al reportar');
-                }
-              },
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar')),
+            TextButton(
+              onPressed: selectedReason == null
+                  ? null
+                  : () async {
+                      try {
+                        await SafetyApi.reportUser(
+                          targetUserId: widget.peerId!,
+                          reason: selectedReason!,
+                        );
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          SnackbarHelper.showSuccess(
+                              context, 'Reporte enviado');
+                        }
+                      } catch (e) {
+                        if (context.mounted)
+                          SnackbarHelper.showError(
+                              context, 'Error al reportar');
+                      }
+                    },
               child: const Text('REPORTAR'),
             ),
           ],
@@ -228,7 +256,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                // Darken background for better contrast with white text
+                color: Colors.black.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(color: Colors.white.withOpacity(0.1)),
               ),
@@ -238,31 +267,50 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: _textController,
-                      style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white),
+                      // Ensure text and cursor are visible
+                      style: const TextStyle(color: Colors.white),
+                      cursorColor: Colors.white70,
                       decoration: InputDecoration(
+                        isDense: true,
+                        filled: false, // Prevent global theme white background
+                        fillColor: Colors.transparent,
                         hintText: 'Escribe un mensaje...',
-                        hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                        hintStyle:
+                            TextStyle(color: Colors.white.withOpacity(0.5)),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 10),
                       ),
                       minLines: 1,
                       maxLines: 4,
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Container(
-                    margin: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [CelestyaColors.celestialBlue, CelestyaColors.mysticalPurple],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight
-                      )
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
-                      onPressed: _sendMessage,
+                  Material(
+                    color: Colors.transparent,
+                    child: Ink(
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                            colors: [
+                              CelestyaColors.celestialBlue,
+                              CelestyaColors.mysticalPurple
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight),
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(30),
+                        onTap: _sendMessage,
+                        child: const SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: Icon(Icons.send_rounded,
+                              color: Colors.white, size: 24),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -280,7 +328,8 @@ class _Bubble extends StatelessWidget {
   final bool isMe;
   final ThemeData theme;
 
-  const _Bubble({required this.message, required this.isMe, required this.theme});
+  const _Bubble(
+      {required this.message, required this.isMe, required this.theme});
 
   @override
   Widget build(BuildContext context) {
@@ -295,19 +344,24 @@ class _Bubble extends StatelessWidget {
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         decoration: BoxDecoration(
-          gradient: isMe 
-            ? const LinearGradient(
-                colors: [CelestyaColors.celestialBlue, CelestyaColors.mysticalPurple],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
+          gradient: isMe
+              ? const LinearGradient(
+                  colors: [
+                    CelestyaColors.celestialBlue,
+                    CelestyaColors.mysticalPurple
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
           color: isMe ? null : Colors.white.withOpacity(0.1), // Glassy for peer
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(20),
             topRight: const Radius.circular(20),
-            bottomLeft: isMe ? const Radius.circular(20) : const Radius.circular(4),
-            bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(20),
+            bottomLeft:
+                isMe ? const Radius.circular(20) : const Radius.circular(4),
+            bottomRight:
+                isMe ? const Radius.circular(4) : const Radius.circular(20),
           ),
         ),
         child: Column(
@@ -316,9 +370,8 @@ class _Bubble extends StatelessWidget {
             Text(
               message.body,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.white,
-                fontWeight: isMe ? FontWeight.w500 : FontWeight.normal
-              ),
+                  color: Colors.white,
+                  fontWeight: isMe ? FontWeight.w500 : FontWeight.normal),
             ),
             const SizedBox(height: 2),
             Row(
@@ -332,12 +385,14 @@ class _Bubble extends StatelessWidget {
                   ),
                 ),
                 if (isMe) ...[
-                   const SizedBox(width: 4),
-                   Icon(
-                     message.readAt != null ? Icons.done_all : Icons.check,
-                     size: 12,
-                     color: message.readAt != null ? Colors.white : Colors.white.withOpacity(0.5),
-                   )
+                  const SizedBox(width: 4),
+                  Icon(
+                    message.readAt != null ? Icons.done_all : Icons.check,
+                    size: 12,
+                    color: message.readAt != null
+                        ? Colors.white
+                        : Colors.white.withOpacity(0.5),
+                  )
                 ]
               ],
             ),

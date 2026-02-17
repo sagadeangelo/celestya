@@ -24,6 +24,7 @@ class ApiClient {
     Map<String, dynamic>? body,
     bool withAuth = true,
     bool isRetry = false,
+    Map<String, String>? customHeaders,
   }) async {
     final String cleanPath = path.startsWith('/') ? path : '/$path';
     final Uri url = Uri.parse('$API_BASE$cleanPath');
@@ -32,6 +33,10 @@ class ApiClient {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
     };
+
+    if (customHeaders != null) {
+      headers.addAll(customHeaders);
+    }
 
     // Auth
     if (withAuth) {
@@ -182,8 +187,9 @@ class ApiClient {
   static Future<dynamic> getJson(
     String path, {
     bool withAuth = true,
+    Map<String, String>? headers,
   }) =>
-      _request('GET', path, withAuth: withAuth);
+      _request('GET', path, withAuth: withAuth, customHeaders: headers);
 
   static Future<dynamic> deleteJson(
     String path, {

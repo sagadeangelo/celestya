@@ -11,6 +11,23 @@ def _get_default_db_url():
 
 DATABASE_URL = os.getenv("DATABASE_URL", _get_default_db_url()).strip()
 
+# LOG ACTIVE DB
+print(f"[STARTUP] ACTIVE DATABASE_URL: {DATABASE_URL}")
+if "sqlite" in DATABASE_URL:
+    try:
+        path = DATABASE_URL.replace("sqlite:///", "").replace("sqlite:", "").lstrip("/")
+        # Fix absolute paths: sqlite:////data/... -> /data/...
+        if DATABASE_URL.startswith("sqlite:////"): 
+            path = "/" + path
+        
+        if os.path.exists(path):
+            size = os.path.getsize(path)
+            print(f"[STARTUP] DB File '{path}' exists. Size: {size} bytes")
+        else:
+             print(f"[STARTUP] DB File '{path}' DOES NOT EXIST yet.")
+    except Exception as e:
+        print(f"[STARTUP] Error checking DB file: {e}")
+
 connect_args = {}
 if DATABASE_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False}

@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import JSONResponse
 
-from .database import Base, engine, SessionLocal, get_db, ensure_user_columns
+from .database import Base, engine, SessionLocal, get_db, ensure_user_columns, DATABASE_URL
 from .routes import auth, users, matches, safety, chats, debug
 from . import models
 from .security import utcnow
@@ -32,6 +32,7 @@ ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*")
 # ✅ Logging
 import logging
 import time
+from sqlalchemy import text
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("api")
@@ -82,8 +83,44 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="Celestya API", version="0.1.0")
 
+    @app.get("/")
+    def read_root():
+        db_type = "unknown"
+        if "sqlite" in str(DATABASE_URL):
+            db_type = "sqlite"
+        elif "postgres" in str(DATABASE_URL):
+            db_type = "postgres"
+        
+        return {
+            "app": "Celestya API",
+            "version": "0.1.0",
+            "deployment_check": "VERSION_ROOT_HEALTH_CHECK",
+            "db_type": db_type
+        }
+
     @app.on_event("startup")
     async def startup_event():
+        # Log DB identity and simple counts to verify correct DB file
+        try:
+            logger.info(f"[DB-STARTUP] DATABASE_URL={DATABASE_URL}")
+            if str(DATABASE_URL).startswith("sqlite"):
+                # mostrar la ruta absoluta del sqlite
+                sqlite_path = str(DATABASE_URL).replace("sqlite:", "")
+                logger.info(f"[DB-STARTUP] SQLite file: {sqlite_path}")
+
+            # Ejecutar conteos simples
+            try:
+                with SessionLocal() as db:
+                    total = db.execute(text("SELECT count(*) FROM users")).scalar()
+                    female = db.execute(text("SELECT count(*) FROM users WHERE gender='female'")).scalar()
+                    verified = db.execute(text("SELECT count(*) FROM users WHERE email_verified=1")).scalar()
+                    has_photo = db.execute(text("SELECT count(*) FROM users WHERE profile_photo_key IS NOT NULL OR photo_path IS NOT NULL")).scalar()
+                    logger.info(f"[DB-COUNTS] users_total={total} female={female} email_verified={verified} has_photo={has_photo}")
+            except Exception as e:
+                logger.error(f"[DB-STARTUP] Error running counts: {e}")
+        except Exception as e:
+            logger.error(f"[DB-STARTUP] Error logging DATABASE_URL: {e}")
+
         # Iniciar el job de limpieza en segundo plano
         asyncio.create_task(daily_cleanup_job())
 

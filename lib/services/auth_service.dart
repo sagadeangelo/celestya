@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'token_storage.dart';
 import 'dart:async';
@@ -16,6 +17,14 @@ class AuthService {
 
     _memToken = clean;
     await TokenStorage.saveToken(clean);
+
+    if (kDebugMode) {
+      debugPrint('JWT SAVE: $clean');
+      if (clean.length > 20) {
+        debugPrint(
+            'JWT SHORT: ${clean.substring(0, 10)}...${clean.substring(clean.length - 10)}');
+      }
+    }
   }
 
   static Future<bool> tryAutoLogin() async {
@@ -24,6 +33,15 @@ class AuthService {
     final token = await TokenStorage.getToken();
     if (token != null && token.isNotEmpty) {
       _memToken = token;
+
+      if (kDebugMode) {
+        debugPrint('JWT LOADED FROM STORAGE: $token');
+        if (token.length > 20) {
+          debugPrint(
+              'JWT SHORT: ${token.substring(0, 10)}...${token.substring(token.length - 10)}');
+        }
+      }
+
       return true;
     }
     return false;

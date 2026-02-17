@@ -1,29 +1,101 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../data/match_candidate.dart';
 import 'api_client.dart';
 
 class MatchesApi {
+  // Store last debug info for UI diagnostics
+  static Map<String, dynamic>? lastDebugInfo;
+
   /// GET /matches/suggested
   /// Backend actual regresa: {"matches": [ ...users... ]}
-  static Future<List<MatchCandidate>> getSuggested() async {
+  /// Optional filters: maxDistanceKm, minAge, maxAge
+  static Future<List<MatchCandidate>> getSuggested({
+    int? maxDistanceKm,
+    int? minAge,
+    int? maxAge,
+  }) async {
     try {
-      final res = await ApiClient.getJson('matches/suggested');
+      // Build query params manually
+      String path = 'matches/suggested';
+      final params = <String>[];
+      if (maxDistanceKm != null) {
+        params.add('max_distance_km=$maxDistanceKm');
+      }
+      if (minAge != null) {
+        params.add('min_age=$minAge');
+      }
+      if (maxAge != null) {
+        params.add('max_age=$maxAge');
+      }
+      if (params.isNotEmpty) {
+        path += '?${params.join('&')}';
+      }
+
+      debugPrint('[MatchesApi] GET $path');
+
+      // Request with debug header if in debug mode
+      final headers = kDebugMode ? {'X-Debug': '1'} : <String, String>{};
+      final res = await ApiClient.getJson(path, headers: headers);
+
+      // Reset debug info
+      lastDebugInfo = null;
+
+      // Frontend debug logs: response size, first item preview, list length
+      try {
+        final encoded = res == null
+            ? 'null'
+            : res is String
+                ? res
+                : jsonEncode(res);
+        debugPrint('[MatchesApi] GET $path response_length=${encoded.length}');
+      } catch (_) {}
 
       dynamic list;
-      if (res is Map && res['matches'] is List) {
-        list = res['matches'];
+      if (res is Map) {
+        if (res['matches'] is List) {
+          list = res['matches'];
+        }
+        // Capture debug info if present
+        if (res['debug'] is Map) {
+          lastDebugInfo = Map<String, dynamic>.from(res['debug']);
+          if (kDebugMode) {
+            debugPrint('[MatchesApi] Captured Debug Info: $lastDebugInfo');
+            if (lastDebugInfo != null) {
+              debugPrint(
+                  '[MatchesApi] DB Path: ${lastDebugInfo!['db_path_guess']}');
+              debugPrint(
+                  '[MatchesApi] DB Sample: ${lastDebugInfo!['db_users_sample']}');
+            }
+          }
+        }
       } else if (res is List) {
         list = res;
       } else {
         return [];
       }
 
+      try {
+        if (list is List && list.isNotEmpty) {
+          debugPrint(
+              '[MatchesApi] GET $path first_item_preview=${jsonEncode(list.first)}');
+          debugPrint('[MatchesApi] GET $path raw_list_length=${list.length}');
+        } else {
+          debugPrint('[MatchesApi] GET $path raw_list_length=0');
+        }
+      } catch (_) {}
+
       final List<MatchCandidate> out = [];
       for (final e in (list as List)) {
-        if (e is Map) {
-          out.add(_fromBackendUser(Map<String, dynamic>.from(e)));
+        try {
+          if (e is Map) {
+            out.add(_fromBackendUser(Map<String, dynamic>.from(e)));
+          }
+        } catch (err) {
+          debugPrint('[MatchesApi] parse item error: $err');
         }
       }
+      debugPrint('[MatchesApi] GET $path parsed_count=${out.length}');
       return out;
     } catch (e) {
       debugPrint('[MatchesApi] Error getSuggested: $e');
@@ -108,5 +180,53 @@ class MatchesApi {
       latitude: (u['lat'] is num) ? (u['lat'] as num).toDouble() : null,
       longitude: (u['lon'] is num) ? (u['lon'] as num).toDouble() : null,
     );
+  }
+
+  /// GET /matches/confirmed
+  /// Returns list of users with confirmed mutual matches
+  static Future<List<MatchCandidate>> getConfirmed() async {
+    try {
+      final res = await ApiClient.getJson('matches/confirmed');
+      if (res is! List) return [];
+
+      // Parse same way as getSuggested
+      return res
+          .map((u) {
+            if (u is! Map) return null;
+            return _fromBackendUser(Map<String, dynamic>.from(u));
+          })
+          .whereType<MatchCandidate>()
+          .toList();
+    } catch (e) {
+      debugPrint('[MatchesApi] Error getConfirmed: $e');
+      return [];
+    }
+  }
+
+  /// POST /matches/like/{userId}
+  /// Returns {ok: true, matched: bool}
+  static Future<Map<String, dynamic>> likeUser(String userId) async {
+    try {
+      final res = await ApiClient.postJson('matches/like/$userId', {});
+      if (res is Map) {
+        return Map<String, dynamic>.from(res);
+      }
+      return {'ok': false};
+    } catch (e) {
+      debugPrint('[MatchesApi] Error likeUser: $e');
+      rethrow;
+    }
+  }
+
+  /// POST /matches/pass/{userId}
+  /// Returns {ok: true}
+  static Future<bool> passUser(String userId) async {
+    try {
+      final res = await ApiClient.postJson('matches/pass/$userId', {});
+      return res is Map && res['ok'] == true;
+    } catch (e) {
+      debugPrint('[MatchesApi] Error passUser: $e');
+      return false;
+    }
   }
 }

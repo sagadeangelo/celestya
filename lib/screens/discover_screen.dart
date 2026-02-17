@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_theme.dart';
-import '../providers/navigation_provider.dart';
-import '../features/profile/presentation/providers/profile_provider.dart';
+import '../providers/discover_provider.dart';
+import '../features/matching/presentation/providers/filter_provider.dart';
+import '../features/matching/presentation/widgets/filter_bottom_sheet.dart';
 
 class DiscoverScreen extends ConsumerStatefulWidget {
   const DiscoverScreen({super.key});
@@ -12,337 +13,615 @@ class DiscoverScreen extends ConsumerStatefulWidget {
 }
 
 class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _heartController;
-  late Animation<double> _heartAnimation;
-
-  late AnimationController _textController;
-  late Animation<double> _textOpacity;
-  late Animation<Offset> _textSlide;
-
-  late Animation<double> _subtitleOpacity;
-  late Animation<Offset> _subtitleSlide;
-
-  late AnimationController _rippleController;
+    with SingleTickerProviderStateMixin {
+  bool _hasStarted = false;
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
-
-    // Heartbeat Animation (Continuous, Soft)
-    _heartController = AnimationController(
+    // Animation for heartbeat
+    _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
 
-    _heartAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
-      CurvedAnimation(parent: _heartController, curve: Curves.easeInOutSine),
-    );
-
-    // Ripple Animation (Continuous, Expanding)
-    _rippleController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
-    )..repeat();
-
-    // Text Entrance Animation (One-shot)
-    _textController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000), // Extended for guide text
-    );
-
-    // Title: Starts at 0.3 (450ms)
-    _textOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.9, end: 1.1).animate(
       CurvedAnimation(
-          parent: _textController,
-          curve: const Interval(0.2, 0.6, curve: Curves.easeOut)),
+        parent: _controller,
+        curve: Curves.easeInOut,
+      ),
     );
-
-    _textSlide =
-        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-      CurvedAnimation(
-          parent: _textController,
-          curve: const Interval(0.2, 0.6, curve: Curves.easeOutCubic)),
-    );
-
-    // Subtitle: Starts at 0.6 (900ms)
-    _subtitleOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-          parent: _textController,
-          curve: const Interval(0.5, 0.8, curve: Curves.easeOut)),
-    );
-
-    _subtitleSlide =
-        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-      CurvedAnimation(
-          parent: _textController,
-          curve: const Interval(0.5, 0.8, curve: Curves.easeOutCubic)),
-    );
-
-    _textController.forward();
   }
 
   @override
   void dispose() {
-    _heartController.dispose();
-    _rippleController.dispose();
-    _textController.dispose();
+    _controller.dispose();
     super.dispose();
+  }
+
+  void _startDiscovery() {
+    setState(() {
+      _hasStarted = true;
+    });
+    // Load candidates only when user starts
+    ref.read(discoverProvider.notifier).loadCandidates();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_hasStarted) {
+      return Scaffold(
+        backgroundColor: CelestyaColors.deepNight,
+        body: _buildIntroView(),
+      );
+    }
+
+    final state = ref.watch(discoverProvider);
+
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Descubrir'),
+        backgroundColor: CelestyaColors.deepNight,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.tune),
+            onPressed: () => _showFilterSheet(context),
+          ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'diagnostics') {
+                _showDiagnostics(context, state);
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'diagnostics',
+                child: Row(
+                  children: [
+                    Icon(Icons.bug_report, color: Colors.grey),
+                    SizedBox(width: 8),
+                    Text('Diagnóstico'),
+                  ],
+                ),
+              ),
+            ],
+            icon: const Icon(Icons.more_vert),
+          ),
+        ],
+      ),
       body: Container(
-        width: double.infinity,
-        height: double.infinity,
         decoration: BoxDecoration(
-          // Diffused Aqua Gradient
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              CelestyaColors.auroraTeal.withOpacity(0.15), // Very soft aqua
-              Colors.white, // Fades to white for cleanliness
+              CelestyaColors.auroraTeal.withOpacity(0.15),
+              Colors.white,
             ],
-            stops: const [0.0, 0.6],
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Radar/Ripple + Pulsing Heart
-            Stack(
-              alignment: Alignment.center,
-              clipBehavior: Clip.none,
-              children: [
-                // Ripples behind
-                ...List.generate(3, (index) {
-                  return AnimatedBuilder(
-                    animation: _rippleController,
-                    builder: (context, child) {
-                      final progress =
-                          (_rippleController.value + (index / 3)) % 1.0;
-                      final scale = 1.0 + (progress * 1.5); // Grow to 2.5x
-                      final opacity = (1.0 - progress).clamp(0.0, 1.0);
+        child: _buildBody(state),
+      ),
+    );
+  }
 
-                      return Transform.scale(
-                        scale: scale,
-                        child: Container(
-                          width:
-                              100, // Base size same as heart container roughly
-                          height: 100,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: CelestyaColors.auroraTeal
-                                  .withOpacity(opacity * 0.5),
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                }),
-
-                // Main Heart Button
-                GestureDetector(
-                  onTap: () {
-                    final profileState = ref.watch(profileProvider);
-                    profileState.when(
-                      data: (profile) {
-                        if (profile.isProfileComplete) {
-                          // Navigate to Matches (Index 1)
-                          ref.read(navIndexProvider.notifier).state = 1;
-                        } else {
-                          // Show message and take to profile
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  'Completa tu perfil (Nombre, Ciudad y Foto) para comenzar a descubrir personas.'),
-                              backgroundColor: Colors.orange,
-                            ),
-                          );
-                          ref.read(navIndexProvider.notifier).state =
-                              3; // Profile Index
-                        }
-                      },
-                      loading: () {},
-                      error: (_, __) =>
-                          ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Error al verificar perfil')),
-                      ),
-                    );
-                  },
-                  child: AnimatedBuilder(
-                    animation: _heartController,
-                    builder: (context, child) {
-                      final profileState = ref.watch(profileProvider);
-                      final bool isLocked = profileState.maybeWhen(
-                        data: (p) => !p.isProfileComplete,
-                        orElse: () => true,
-                      );
-
-                      return Transform.scale(
-                        scale: _heartAnimation.value,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            child!,
-                            if (isLocked)
-                              Positioned(
-                                right: 0,
-                                bottom: 0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.lock_rounded,
-                                    size: 24,
-                                    color: Colors.orange,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(30),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
-                        boxShadow: [
-                          BoxShadow(
-                            color: CelestyaColors.auroraTeal.withOpacity(0.4),
-                            blurRadius: 30,
-                            spreadRadius: 5,
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.favorite_rounded,
-                        size: 80,
-                        color: CelestyaColors.nebulaPink,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-
-            // Guide Text
-            FadeTransition(
-              opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
-                  CurvedAnimation(
-                      parent: _textController,
-                      curve: const Interval(0.8, 1.0, curve: Curves.easeIn))),
-              child: Text(
-                "Toca para conectar",
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      // Reduced to labelMedium (subtle)
-                      color: CelestyaColors.deepNight.withOpacity(0.5),
-                      letterSpacing: 1.5,
-                      fontWeight: FontWeight.w400, // Lighter
-                    ),
+  Widget _buildIntroView() {
+    return GestureDetector(
+      onTap: _startDiscovery,
+      behavior: HitTestBehavior.opaque,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background gradient
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  CelestyaColors.deepNight,
+                  Color(0xFF2D1E4E), // Slightly lighter purple
+                ],
               ),
             ),
+          ),
 
-            const SizedBox(height: 40),
-
-            // Welcome Text
-            FadeTransition(
-              opacity: _textOpacity,
-              child: SlideTransition(
-                position: _textSlide,
+          // Content
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Bienvenido a',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            // Reduced to titleMedium
-                            color: CelestyaColors.deepNight.withOpacity(0.6),
-                            fontWeight: FontWeight.w300,
-                            letterSpacing: 1.2,
-                          ),
-                    ),
-                    const SizedBox(height: 4), // Reduced spacing
-                    ShaderMask(
-                      shaderCallback: (bounds) =>
-                          CelestyaColors.mainGradient.createShader(bounds),
-                      child: Text(
-                        'Celestya',
-                        style:
-                            Theme.of(context).textTheme.displaySmall?.copyWith(
-                                  // Reduced to displaySmall
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.5,
-                                ),
+                    ScaleTransition(
+                      scale: _scaleAnimation,
+                      child: Container(
+                        padding: const EdgeInsets.all(30),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: CelestyaColors.nebulaPink.withOpacity(0.2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: CelestyaColors.nebulaPink.withOpacity(0.4),
+                              blurRadius: 40,
+                              spreadRadius: 10,
+                            )
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.favorite,
+                          size: 80,
+                          color: CelestyaColors.nebulaPink,
+                        ),
                       ),
                     ),
-                    const SizedBox(
-                        height: 24), // More space for the hero phrase
-
-                    // Subtitle Animation (The Hero)
-                    FadeTransition(
-                      opacity: _subtitleOpacity,
-                      child: SlideTransition(
-                        position: _subtitleSlide,
-                        child: ShaderMask(
-                          // Muted Golden/Eternal Gradient (More subtle)
-                          shaderCallback: (bounds) => const LinearGradient(
-                            colors: [
-                              CelestyaColors.deepNight,
-                              Color(
-                                  0xFFB89307), // Slightly more muted/deeper gold
-                              CelestyaColors.deepNight
-                            ],
-                            stops: [0.0, 0.5, 1.0],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ).createShader(bounds),
-                          child: Text(
-                            '"Donde las conexiones se vuelven eternas"',
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                    // Bumped back to titleMedium
-                                    color: Colors.white, // Masked
-                                    fontSize:
-                                        16, // Increased to 16 as requested
-                                    fontWeight: FontWeight.w500,
-                                    fontStyle: FontStyle.italic,
-                                    letterSpacing: 0.8,
-                                    height: 1.3,
-                                    shadows: [
-                                  Shadow(
-                                    color: CelestyaColors.starlightGold
-                                        .withOpacity(0.4),
-                                    blurRadius:
-                                        6, // Adjusted blur for smaller text
-                                    offset: const Offset(0, 1),
-                                  ),
-                                ]),
-                          ),
-                        ),
+                    const SizedBox(height: 48),
+                    const Text(
+                      'Encuentra tu conexión',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Toca para comenzar',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 16,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ],
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody(DiscoverState state) {
+    if (state.isLoading && state.candidates.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // ... rest of _buildBody logic ...
+    if (state.error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            Text('Error: ${state.error}'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () =>
+                  ref.read(discoverProvider.notifier).loadCandidates(),
+              child: const Text('Reintentar'),
+            ),
           ],
         ),
+      );
+    }
+
+    if (state.candidates.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.filter_list_off,
+                size: 80, color: CelestyaColors.nebulaPink),
+            const SizedBox(height: 16),
+            const Text(
+              'No hay candidatos con tus filtros',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 8),
+            // Suggest broader filters
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 32.0),
+              child: Text(
+                'Intenta ampliar la edad o distancia para ver a los testers.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                OutlinedButton(
+                  onPressed: () {
+                    ref
+                        .read(filterProvider.notifier)
+                        .resetFilters(); // Correct method name
+                    ref
+                        .read(discoverProvider.notifier)
+                        .loadCandidates(forceRefresh: true);
+                  },
+                  child: const Text('Restablecer'),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: () => _showFilterSheet(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: CelestyaColors.nebulaPink,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Ajustar Filtros'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    final candidate = state.candidates.first;
+    return _buildCandidateCard(candidate);
+  }
+
+  Widget _buildCandidateCard(candidate) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableHeight = constraints.maxHeight;
+        final availableWidth = constraints.maxWidth;
+
+        // Maximize photo height, leaving just enough space for buttons (approx 100px + padding)
+        final cardHeight = availableHeight - 140;
+        final cardWidth = availableWidth * 0.95; // Wider card
+
+        return Center(
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // Swipeable Photo Card
+                SizedBox(
+                  height: cardHeight,
+                  width: cardWidth,
+                  child: Dismissible(
+                    key: Key(candidate.id),
+                    direction: DismissDirection.horizontal,
+                    onDismissed: (direction) {
+                      if (direction == DismissDirection.endToStart) {
+                        // Swipe Left -> Pass
+                        ref
+                            .read(discoverProvider.notifier)
+                            .passCandidate(candidate.id);
+                      } else {
+                        // Swipe Right -> Like
+                        ref
+                            .read(discoverProvider.notifier)
+                            .likeCandidate(candidate.id)
+                            .then((matched) {
+                          if (matched && mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('¡Es un match! 💕'),
+                                backgroundColor: CelestyaColors.nebulaPink,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        });
+                      }
+                    },
+                    background: Container(
+                      decoration: BoxDecoration(
+                        color: CelestyaColors.nebulaPink,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.only(left: 30),
+                      child: const Icon(Icons.favorite,
+                          color: Colors.white, size: 50),
+                    ),
+                    secondaryBackground: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 30),
+                      child: const Icon(Icons.close,
+                          color: Colors.white, size: 50),
+                    ),
+                    child: Container(
+                      width: cardWidth,
+                      height: cardHeight,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                CelestyaColors.mysticalPurple.withOpacity(0.3),
+                            blurRadius: 20,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            // Photo
+                            candidate.photoUrl != null
+                                ? Image.network(
+                                    candidate.photoUrl!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        _buildPlaceholder(),
+                                  )
+                                : _buildPlaceholder(),
+
+                            // Compatibility Bar Overlay (Top)
+                            Positioned(
+                              top: 16,
+                              left: 16,
+                              right: 16,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: LinearProgressIndicator(
+                                        value: candidate.compatibility ??
+                                            0.5, // Default 50% if null
+                                        backgroundColor: Colors.black26,
+                                        valueColor:
+                                            const AlwaysStoppedAnimation<Color>(
+                                          CelestyaColors.nebulaPink,
+                                        ),
+                                        minHeight: 8,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black45,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '${((candidate.compatibility ?? 0.5) * 100).toInt()}% Match',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Gradient overlay (Bottom Info)
+                            Positioned(
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.bottomCenter,
+                                    end: Alignment.topCenter,
+                                    colors: [
+                                      Colors.black.withOpacity(0.9),
+                                      Colors.transparent,
+                                    ],
+                                    stops: const [0.0, 0.8],
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${candidate.name}${candidate.age != null ? ", ${candidate.age}" : ""}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    if (candidate.city.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          candidate.city,
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 18,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Action Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Pass Button
+                    _buildActionButton(
+                      icon: Icons.close,
+                      color: Colors.red,
+                      onPressed: () async {
+                        await ref
+                            .read(discoverProvider.notifier)
+                            .passCandidate(candidate.id);
+                      },
+                    ),
+
+                    const SizedBox(width: 40),
+
+                    // Like Button
+                    _buildActionButton(
+                      icon: Icons.favorite,
+                      color: CelestyaColors.nebulaPink,
+                      onPressed: () async {
+                        final matched = await ref
+                            .read(discoverProvider.notifier)
+                            .likeCandidate(candidate.id);
+                        if (matched && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('¡Es un match! 💕'),
+                              backgroundColor: CelestyaColors.nebulaPink,
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    return Container(
+      color: CelestyaColors.deepNight.withOpacity(0.1),
+      child: const Center(
+        child: Icon(Icons.person, size: 100, color: Colors.grey),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: 70,
+        height: 70,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.4),
+              blurRadius: 15,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: Icon(icon, size: 35, color: color),
+      ),
+    );
+  }
+
+  void _showFilterSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => const FilterBottomSheet(),
+    );
+  }
+
+  void _showDiagnostics(BuildContext context, DiscoverState state) {
+    // Get user profile for diagnostics (if available)
+    // For now, just show basic info
+    final filters = ref.read(filterProvider);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('🔍 Diagnóstico de Filtros'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Estado actual:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text('• Candidatos recibidos: ${state.candidates.length}'),
+              Text('• Cargando: ${state.isLoading}'),
+              if (state.error != null) ...[
+                const SizedBox(height: 8),
+                const Text('Error:',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.red)),
+                Text(state.error!, style: const TextStyle(color: Colors.red)),
+              ],
+              const Divider(height: 24),
+              const Text('Filtros activos (Provider):',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text('• max_distance_km: ${filters.maxDistance} km'),
+              Text(
+                  '• age_range: ${filters.ageRange.start.round()} - ${filters.ageRange.end.round()}'),
+              const Divider(height: 24),
+              const Text('Nota:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              const Text(
+                'Estos valores se envían como query params al backend /matches/suggested.',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              if (state.backendDebugInfo != null) ...[
+                const Divider(height: 24),
+                const Text('Backend Debug Info:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(
+                    '• Filtros recibidos: ${state.backendDebugInfo!['requested_filters']}'),
+                Text(
+                    '• Total usuarios: ${state.backendDebugInfo!['total_users']}'),
+                Text(
+                    '• Despues exclusiones: ${state.backendDebugInfo!['after_exclusions']}'),
+                Text(
+                    '• Conteo final: ${state.backendDebugInfo!['final_count']}'),
+                Text('• Toggles: ${state.backendDebugInfo!['toggles']}'),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
       ),
     );
   }

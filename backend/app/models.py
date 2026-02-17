@@ -204,3 +204,43 @@ class Block(Base):
     __table_args__ = (
         UniqueConstraint('blocker_id', 'blocked_id', name='uq_block_active'),
     )
+
+
+class Like(Base):
+    """
+    Represents a one-way like from one user to another.
+    When mutual, a Match is created.
+    """
+    __tablename__ = "likes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    liker_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    liked_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    liker = relationship("User", foreign_keys=[liker_id])
+    liked = relationship("User", foreign_keys=[liked_id])
+
+    __table_args__ = (
+        UniqueConstraint('liker_id', 'liked_id', name='uq_like_pair'),
+    )
+
+
+class Pass(Base):
+    """
+    Represents a pass/rejection from one user to another.
+    Passed users won't appear in suggested matches.
+    """
+    __tablename__ = "passes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    passer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    passed_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    passer = relationship("User", foreign_keys=[passer_id])
+    passed = relationship("User", foreign_keys=[passed_id])
+
+    __table_args__ = (
+        UniqueConstraint('passer_id', 'passed_id', name='uq_pass_pair'),
+    )
