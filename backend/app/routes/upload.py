@@ -1,13 +1,18 @@
 import logging
 import uuid
-from fastapi import UploadFile, File, APIRouter, HTTPException
+from fastapi import UploadFile, File, APIRouter, HTTPException, Depends
 from app.services.r2_client import upload_fileobj, presigned_get_url
+from app.deps import get_current_user
+from app.models import User
 
 logger = logging.getLogger("api")
 router = APIRouter()
 
 @router.post("/upload")
-async def upload(file: UploadFile = File(...)):
+async def upload(
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user)
+):
     if not (file.content_type or "").startswith("image/"):
         raise HTTPException(status_code=400, detail="Solo imágenes por ahora")
 
@@ -15,7 +20,7 @@ async def upload(file: UploadFile = File(...)):
     if ext not in ("png", "jpg", "jpeg", "webp"):
         ext = "png"
 
-    key = f"uploads/{uuid.uuid4().hex}.{ext}"
+    key = f"uploads/user_{user.id}_{uuid.uuid4().hex}.{ext}"
 
     try:
         logger.info(f"Iniciando subida a R2: {key}")

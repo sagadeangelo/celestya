@@ -1,0 +1,5 @@
+[*] Starting Smoke Test Scenario...
+[*] Registering user_461524dd@example.com and user_117a5b25@example.com
+[+] Manually verified users in DB for testing.
+[-] get_me failed: 500 {"detail":"Internal Server Error","error_id":"8863f4e6c5d14219a2b3274ae40b7926"}
+[-] Test crashed: 500 Server Error: Internal Server Error for url: http://localhost:8001/users/me

@@ -55,6 +55,9 @@
                 <data
                     android:scheme="celestya"
                     android:host="verified" />
+                <data
+                    android:scheme="celestya"
+                    android:host="reset-password" />
             </intent-filter>
 
         </activity>

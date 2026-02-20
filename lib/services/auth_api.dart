@@ -79,4 +79,20 @@ class AuthApi {
       withAuth: false,
     );
   }
+
+  static Future<void> forgotPassword(String email) async {
+    await ApiClient.postJson(
+      '/auth/forgot-password',
+      {'email': email},
+      withAuth: false,
+    );
+  }
+
+  static Future<void> resetPassword(String token, String newPassword) async {
+    await ApiClient.postJson(
+      '/auth/reset-password',
+      {'token': token, 'new_password': newPassword},
+      withAuth: false,
+    );
+  }
 }

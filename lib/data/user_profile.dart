@@ -73,10 +73,10 @@ enum Gender {
 
 // Opciones de Complexión
 const List<String> kBodyTypeOptions = [
-  'Atlética / Tonificada 🏃',
-  'Promedio ⚖️',
-  'Con Curvas / Robusto 🍑',
-  'Fuera de talla ✨',
+  'Delgado (Ectomorfo) 📏',
+  'Atlético (Mesomorfo) 🏋️',
+  'Promedio 🧍',
+  'Robusto (Endomorfo) 🧸',
 ];
 
 const List<String> kInterestOptions = [

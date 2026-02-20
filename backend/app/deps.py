@@ -4,7 +4,13 @@ from sqlalchemy.orm import Session
 
 from .database import get_db
 from . import models
-from .security import decode_token
+from .security import decode_token, utcnow
+from datetime import timedelta, timezone
+# ...
+import structlog
+
+logger = structlog.get_logger("api")
+
 
 # ✅ OJO: tokenUrl debe apuntar EXACTO a tu endpoint OAuth2 (form)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -26,15 +32,11 @@ def get_current_user(
         user_id = decode_token(token.strip())
     except HTTPException as e:
         # ✅ Respeta el mensaje real del decoder (Invalid token / expired / missing sub etc)
-        print(f"[AUTH] decode_token HTTPException: {e.detail}")
-        token_preview = (token[:12] + "...") if token else "empty"
-        print(f"[AUTH] token preview: {token_preview}")
+        logger.warning("auth_token_decode_http_error", detail=e.detail, token_preview=(token[:12] + "...") if token else "empty")
         raise e
     except Exception as e:
         # ✅ Cualquier otra cosa inesperada
-        print(f"[AUTH] token invalid (unexpected): {type(e).__name__}: {e}")
-        token_preview = (token[:12] + "...") if token else "empty"
-        print(f"[AUTH] token preview: {token_preview}")
+        logger.error("auth_token_invalid_unexpected", error=str(e), error_type=type(e).__name__, token_preview=(token[:12] + "...") if token else "empty")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
@@ -48,5 +50,21 @@ def get_current_user(
             detail="User not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    # ✅ Online Status: Update last_seen if > 2 minutes
+    now = utcnow()
+    
+    last_seen_aware = user.last_seen
+    if last_seen_aware and last_seen_aware.tzinfo is None:
+        last_seen_aware = last_seen_aware.replace(tzinfo=timezone.utc)
 
+    if not user.last_seen or (now - last_seen_aware > timedelta(minutes=2)):
+        user.last_seen = now
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        db.refresh(user)
+
+    structlog.contextvars.bind_contextvars(user_id=user.id)
     return user

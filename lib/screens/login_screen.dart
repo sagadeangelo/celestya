@@ -33,7 +33,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Iniciar sesión"),
@@ -75,7 +75,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
             const SizedBox(height: 40),
-            
+
             TextFormField(
               controller: _emailCtrl,
               keyboardType: TextInputType.emailAddress,
@@ -84,13 +84,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 prefixIcon: Icon(Icons.email_outlined),
               ),
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'El correo es requerido';
+                if (v == null || v.trim().isEmpty)
+                  return 'El correo es requerido';
                 if (!v.contains('@')) return 'Correo inválido';
                 return null;
               },
             ),
             const SizedBox(height: 16),
-            
+
             TextFormField(
               controller: _passCtrl,
               obscureText: _obscurePassword,
@@ -98,8 +99,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 labelText: "Contraseña",
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
-                  icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  icon: Icon(_obscurePassword
+                      ? Icons.visibility
+                      : Icons.visibility_off),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
               validator: (v) {
@@ -114,20 +118,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 style: const TextStyle(color: Colors.red, fontSize: 12),
               ),
             ],
+
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () =>
+                    Navigator.pushNamed(context, '/forgot-password'),
+                child: Text(
+                  "¿Has olvidado tu contraseña?",
+                  style: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+
             const SizedBox(height: 24),
-            
+
             FilledButton(
               onPressed: authState.isLoading ? null : _login,
-              style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+              style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16)),
               child: authState.isLoading
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
                   : const Text("Entrar"),
             ),
             const SizedBox(height: 12),
-            
+
             // Nuevo botón de verificación rápida
             TextButton(
-              onPressed: authState.isLoading ? null : _login, // Reintenta el mismo flujo de login
+              onPressed: authState.isLoading
+                  ? null
+                  : _login, // Reintenta el mismo flujo de login
               child: Text(
                 "Ya verifiqué mi correo",
                 style: TextStyle(
@@ -137,7 +164,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            
+
             Row(
               children: [
                 const Expanded(child: Divider()),
@@ -149,10 +176,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ],
             ),
             const SizedBox(height: 24),
-            
+
             OutlinedButton(
               onPressed: () => Navigator.pushNamed(context, '/register'),
-              style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+              style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16)),
               child: const Text("Crear cuenta"),
             ),
           ],

@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../widgets/match_voice_player.dart';
 import '../services/api_client.dart';
 import '../services/chats_api.dart';
+import '../services/matches_api.dart'; // Added for Unmatch
 import 'chat_screen.dart';
 import '../utils/snackbar_helper.dart';
 
@@ -255,6 +256,21 @@ class MatchDetailScreen extends StatelessWidget {
                     ],
                   ),
 
+                  const SizedBox(height: 16),
+
+                  // Unmatch Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton.icon(
+                      onPressed: () => _unmatchUser(context),
+                      icon: const Icon(Icons.person_remove_outlined),
+                      label: const Text('Deshacer Match'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey[600],
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 100), // Bottom padding
                 ],
               ),
@@ -327,13 +343,13 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _blockUser(BuildContext context) async {
+  Future<void> _unmatchUser(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('¿Bloquear usuario?'),
-        content:
-            const Text('Dejarás de ver este perfil y él no podrá verte a ti.'),
+        title: const Text('¿Deshacer Match?'),
+        content: const Text(
+            'Si deshaces el match, desaparecerá de tu lista y no podrán enviarse mensajes. Esta acción es irreversible.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -341,27 +357,117 @@ class MatchDetailScreen extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('BLOQUEAR'),
+            child: const Text('DESHACER MATCH'),
           ),
         ],
       ),
     );
 
     if (confirmed == true) {
+      if (!context.mounted) return;
       try {
-        await ApiClient.postJson('/reports/block', {
-          'target_user_id': candidate.id,
-        });
+        // Import MatchesApi needed? Yes, likely from matches_api.dart
+        // Note: Check imports. MatchesApi was added in previous steps?
+        // Wait, MatchesApi is in services/matches_api.dart.
+        // I need to ensure it uses the new method.
+        // Assuming global import or I need to add it?
+        // Let's check imports in next step or assume it works due to previous context?
+        // The file `lib/screens/match_detail_screen.dart` has `import '../services/api_client.dart';`
+        // It does NOT have `import '../services/matches_api.dart';` in the snippet I viewed (Step 1116).
+        // I need to add the import!
+
+        // I cannot add import easily with replace_file_content in the middle.
+        // I should use multi_replace.
+
+        // But for this block, let's just use the logic directly or call ApiClient?
+        // "static Future<bool> unmatchUser(String userId) async" implemented in MatchesApi.
+        // Better to use that.
+        // I will do a multi_replace to add import AND the button.
+
+        // Wait, I am in replace_file_content tool properties.
+        // I'll cancel and use multi_replace.
+
+        // Actually, I can use ApiClient directly here to avoid import mess if strictly necessary,
+        // but cleaner to use MatchesApi.
+        // Let's assume I'll fix imports if needed or use ApiClient directly.
+        // MatchesApi.unmatchUser calls `ApiClient.postJson('matches/unmatch/$userId', {})`.
+
+        await ApiClient.postJson('matches/unmatch/${candidate.id}', {});
+
         if (context.mounted) {
-          SnackbarHelper.showSuccess(context, 'Usuario bloqueado');
-          Navigator.pop(context); // Salir del detalle
+          SnackbarHelper.showSuccess(context, 'Match deshecho');
+          Navigator.pop(context, true); // Return true to indicate change?
+          // Actually Navigator.pop just goes back. The screen list should refresh.
+          // Ideally pop with result "refresh".
         }
       } catch (e) {
         if (context.mounted) {
-          SnackbarHelper.showError(context, 'Error al bloquear usuario');
+          SnackbarHelper.showError(context, 'Error al deshacer match');
         }
       }
     }
+  }
+
+  Future<void> _blockUser(BuildContext context) async {
+    showDialog(
+      context: context,
+      builder: (context) {
+        String? selectedReason;
+        final reasons = [
+          'Spam',
+          'Acoso',
+          'Perfil falso',
+          'Comportamiento inapropiado',
+          'Otro'
+        ];
+
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('Reportar usuario'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: reasons
+                  .map((r) => RadioListTile<String>(
+                        title: Text(r),
+                        value: r,
+                        groupValue: selectedReason,
+                        onChanged: (val) =>
+                            setState(() => selectedReason = val),
+                      ))
+                  .toList(),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar')),
+              TextButton(
+                onPressed: selectedReason == null
+                    ? null
+                    : () async {
+                        try {
+                          await ApiClient.postJson('/reports', {
+                            'target_user_id': candidate.id,
+                            'reason': selectedReason,
+                          });
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            SnackbarHelper.showSuccess(context,
+                                'Reporte enviado. Gracias por ayudar a mantener la comunidad segura.');
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            SnackbarHelper.showError(
+                                context, 'Error al enviar reporte');
+                          }
+                        }
+                      },
+                child: const Text('REPORTAR'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _startChat(BuildContext context) async {

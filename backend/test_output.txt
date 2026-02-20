@@ -1,0 +1,4 @@
+[*] Starting Smoke Test Scenario...
+[*] Registering user_ffe74d69@example.com and user_d647524a@example.com
+[-] Login failed: {"detail":"Verifica tu correo antes de entrar"}
+[-] Test crashed: 403 Client Error: Forbidden for url: http://localhost:8001/auth/login

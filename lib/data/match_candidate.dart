@@ -21,6 +21,7 @@ class MatchCandidate {
   final String? photoKey;
   final double? latitude;
   final double? longitude;
+  final String? gender; // 'male' | 'female'
 
   MatchCandidate({
     required this.id,
@@ -41,6 +42,7 @@ class MatchCandidate {
     this.photoKey,
     this.latitude,
     this.longitude,
+    this.gender,
   }) : name = _cleanName(name);
 
   static String _cleanName(String rawName) {

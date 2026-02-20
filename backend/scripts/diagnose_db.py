@@ -1,76 +1,50 @@
+import sqlite3
 import os
-import sys
-from sqlalchemy import create_engine, text
 
-# Exact copy of logic from database.py to ensure we see what the app sees
-def _get_default_db_url():
-    if os.path.exists("/data"):
-        return "sqlite:////data/celestya.db"
-    return "sqlite:///./celestya.db"
+DB_PATH = "/data/celestya.db"
 
-DATABASE_URL = os.getenv("DATABASE_URL", _get_default_db_url()).strip()
+def diagnose():
+    print("[-] Diagnosing DB...")
+    if not os.path.exists(DB_PATH):
+        print(f"DB not found at {DB_PATH}")
+        return
 
-print(f"--- DIAGNOSTIC START ---")
-print(f"Computed DATABASE_URL: {DATABASE_URL}")
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
 
-try:
-    if "sqlite" in DATABASE_URL:
-        path = DATABASE_URL.replace("sqlite:///", "").replace("sqlite:", "").lstrip("/")
-        if DATABASE_URL.startswith("sqlite:////"): 
-            path = "/" + path
+    try:
+        # 1. Total User Count
+        total = cursor.execute("SELECT count(*) FROM users").fetchone()[0]
+        print(f"Total Users: {total}")
+
+        # 2. Gender Breakdown
+        print("\n--- Gender Breakdown ---")
+        rows = cursor.execute("SELECT gender, count(*) FROM users GROUP BY gender").fetchall()
+        for r in rows:
+            print(f"{r[0]}: {r[1]}")
+
+        # 3. Photo Status
+        print("\n--- Photo Status ---")
+        has_photo = cursor.execute("SELECT count(*) FROM users WHERE profile_photo_key IS NOT NULL OR photo_path IS NOT NULL").fetchone()[0]
+        print(f"With Photo (key or path): {has_photo}")
+        print(f"Without Photo: {total - has_photo}")
+
+        # 4. Email Verified Status
+        print("\n--- Email Verification ---")
+        verified = cursor.execute("SELECT count(*) FROM users WHERE email_verified=1").fetchone()[0]
+        print(f"Verified: {verified}")
+        print(f"Unverified: {total - verified}")
         
-        if os.path.exists(path):
-            size = os.path.getsize(path)
-            print(f"DB File '{path}' FOUND. Size: {size} bytes")
-        else:
-            print(f"DB File '{path}' NOT FOUND.")
-            # If default not found, try to look for any .db file in /data
-            if os.path.exists("/data"):
-                print("Listing /data:")
-                for f in os.listdir("/data"):
-                    print(f" - {f}")
-except Exception as e:
-    print(f"Error checking file sys: {e}")
+        # 5. List Female Users (Sample)
+        # print("\n--- Sample Females ---")
+        # females = cursor.execute("SELECT id, name, email, profile_photo_key FROM users WHERE gender='female' LIMIT 5").fetchall()
+        # for f in females:
+        #    print(f)
 
-try:
-    engine = create_engine(DATABASE_URL)
-    with engine.connect() as conn:
-        print("Connected to DB successfully.")
-        
-        # 1. Count Users
-        try:
-            count = conn.execute(text("SELECT COUNT(*) FROM users")).scalar()
-            print(f"Total Users in DB: {count}")
-        except Exception as e:
-            print(f"Error counting users: {e}")
-            sys.exit(1)
+    except Exception as e:
+        print(f"[-] Error: {e}")
+    finally:
+        conn.close()
 
-        if count == 0:
-            print("DB IS EMPTY. Seeding logic failed or writing to wrong file.")
-        else:
-            # 2. Check Female Testers
-            try:
-                females = conn.execute(text("SELECT COUNT(*) FROM users WHERE gender='female'")).scalar()
-                print(f"Female Users: {females}")
-            except Exception as e:
-                 print(f"Error counting females: {e}")
-
-            # 3. Sample Data
-            print("\n--- SAMPLE USERS (First 5) ---")
-            rows = conn.execute(text("SELECT id, email, gender, show_me, email_verified, profile_photo_key, birthdate FROM users LIMIT 5")).fetchall()
-            for r in rows:
-                print(r)
-
-            # 4. Check for 'tester' specific users
-            print("\n--- TESTER ACCOUNTS ---")
-            testers = conn.execute(text("SELECT id, email, gender, show_me, email_verified FROM users WHERE email LIKE 'tester_%'")).fetchall()
-            if not testers:
-                print("No users with email 'tester_%' found.")
-            else:
-                for t in testers:
-                    print(t)
-
-except Exception as e:
-    print(f"CRITICAL DB ERROR: {e}")
-
-print(f"--- DIAGNOSTIC END ---")
+if __name__ == "__main__":
+    diagnose()

@@ -1,11 +1,12 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy.orm import Session, aliased
-from sqlalchemy import func, desc, or_
+from sqlalchemy import func, desc, or_, and_, exists
 
 from ..database import get_db
 from ..deps import get_current_user
 from .. import models, schemas
+from ..limiter import limiter, LIMIT_CHAT
 
 router = APIRouter()
 
@@ -21,11 +22,22 @@ def get_chats(
     - contador de no leídos
     """
     # 1. Buscar conversaciones donde soy A o B
+    # 1. Buscar conversaciones donde soy A o B, Y NO hay bloqueo activo
+    # "Bloqueo activo" = existe registro en blocks donde (blocker=A and blocked=B) OR (blocker=B and blocked=A)
+    
+    block_exists = exists().where(
+        or_(
+            and_(models.Block.blocker_id == models.Conversation.user_a_id, models.Block.blocked_id == models.Conversation.user_b_id),
+            and_(models.Block.blocker_id == models.Conversation.user_b_id, models.Block.blocked_id == models.Conversation.user_a_id)
+        )
+    )
+
     convs = db.query(models.Conversation).filter(
         or_(
             models.Conversation.user_a_id == current_user.id,
             models.Conversation.user_b_id == current_user.id
-        )
+        ),
+        ~block_exists
     ).all()
 
     results = []
@@ -78,21 +90,28 @@ def get_messages(
         raise HTTPException(status_code=404, detail="Chat not found")
     
     if current_user.id not in [conv.user_a_id, conv.user_b_id]:
-        raise HTTPException(status_code=403, detail="Not a member of this chat")
+        raise HTTPException(status_code=404, detail="Chat not found") # 404 to prevent enumeration
+
+    # 2. Check blocks
+    peer_id = conv.user_b_id if conv.user_a_id == current_user.id else conv.user_a_id
+    if _is_blocked(db, current_user.id, peer_id):
+        raise HTTPException(status_code=404, detail="Chat not found")
 
     query = db.query(models.Message).filter(models.Message.conversation_id == chat_id)
 
     if before_id:
         query = query.filter(models.Message.id < before_id)
     
-    # Ordenamos desc para paginacion, luego podemos invertir o cliente maneja
+    # Ordenamos desc para paginacion
     msgs = query.order_by(desc(models.Message.id)).limit(limit).all()
     
     return msgs
 
 
 @router.post("/{chat_id}/messages", response_model=schemas.MessageOut)
+@limiter.limit(LIMIT_CHAT)
 def send_message(
+    request: Request,
     chat_id: int,
     msg_in: schemas.MessageCreate,
     db: Session = Depends(get_db),
@@ -104,10 +123,14 @@ def send_message(
         raise HTTPException(status_code=404, detail="Chat not found")
     
     if current_user.id not in [conv.user_a_id, conv.user_b_id]:
-        raise HTTPException(status_code=403, detail="Not a member of this chat")
+        raise HTTPException(status_code=404, detail="Chat not found")
+    
+    peer_id = conv.user_b_id if conv.user_a_id == current_user.id else conv.user_a_id
 
-    # 2. Rate limit básico (opcional): chequear ultimo mensaje muy reciente?
-    # Por ahora simple
+    # 1b. Verificar BLOQUEO (estricto)
+    if _is_blocked(db, current_user.id, peer_id):
+        # El usuario no debería ver esto si la UI filtra, pero por seguridad:
+        raise HTTPException(status_code=403, detail="Conversation is blocked")
 
     # 3. Crear mensaje
     new_msg = models.Message(
@@ -137,7 +160,11 @@ def mark_read(
         raise HTTPException(status_code=404, detail="Chat not found")
 
     if current_user.id not in [conv.user_a_id, conv.user_b_id]:
-        raise HTTPException(status_code=403, detail="Not a member of this chat")
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    peer_id = conv.user_b_id if conv.user_a_id == current_user.id else conv.user_a_id
+    if _is_blocked(db, current_user.id, peer_id):
+        raise HTTPException(status_code=404, detail="Chat not found")
 
     # Marcar como leídos los mensajes que NO son mios
     query = db.query(models.Message).filter(
@@ -169,9 +196,12 @@ def start_chat_from_match(
 
     # 2. Validar que soy parte
     if current_user.id not in [match.user_a_id, match.user_b_id]:
-        raise HTTPException(status_code=403, detail="Not your match")
+        raise HTTPException(status_code=404, detail="Match not found")
 
     peer_id = match.user_b_id if match.user_a_id == current_user.id else match.user_a_id
+
+    if _is_blocked(db, current_user.id, peer_id):
+        raise HTTPException(status_code=403, detail="Cannot chat with blocked user")
 
     # 3. Buscar conversacion existente
     # Ordenamos IDs para busqueda si convención
@@ -232,6 +262,15 @@ def start_chat_with_user(
     if not match:
         raise HTTPException(status_code=403, detail="No match found with this user")
     
-    # 2. Reusar lógica de start match (podríamos refactorizar, pero duplicar es seguro aquí por simpleza)
+    # 2. Reusar lógica de start match
     return start_chat_from_match(match.id, db, current_user)
+
+
+def _is_blocked(db: Session, user1_id: int, user2_id: int) -> bool:
+    return db.query(exists().where(
+        or_(
+            and_(models.Block.blocker_id == user1_id, models.Block.blocked_id == user2_id),
+            and_(models.Block.blocker_id == user2_id, models.Block.blocked_id == user1_id)
+        )
+    )).scalar()
 

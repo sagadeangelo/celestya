@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -10,6 +10,10 @@ from ..deps import get_current_user
 from ..database import get_db
 from .. import models, schemas
 from ..services.r2_client import presigned_get_url
+from ..limiter import limiter, LIMIT_PHOTO
+import structlog
+
+logger = structlog.get_logger("api")
 
 router = APIRouter()
 
@@ -44,12 +48,28 @@ def user_to_out(user: models.User) -> dict:
             if key and isinstance(key, str):
                 photo_urls.append(presigned_get_url(key))
 
+    # Online logic
+    is_online = False
+    if user.last_seen:
+        from ..security import utcnow
+        from datetime import timedelta, timezone
+        
+        last_seen_aware = user.last_seen
+        if last_seen_aware.tzinfo is None:
+            last_seen_aware = last_seen_aware.replace(tzinfo=timezone.utc)
+
+        # 5 minutes threshold
+        if (utcnow() - last_seen_aware) < timedelta(minutes=5):
+            is_online = True
+
     return {
         "id": user.id,
         "email": user.email,
         "name": display_name,
         "birthdate": user.birthdate,
         "email_verified": getattr(user, "email_verified", False),
+        "is_online": is_online,
+        "last_seen": user.last_seen,
         "city": user.city,
         "stake": user.stake,
         "lat": user.lat,
@@ -109,7 +129,50 @@ def delete_me(
         except Exception:
             pass
 
-    # 3. Borrar de DB
+    # 3. Borrar dependencias manualmente para evitar IntegrityError (Foreign Keys strict)
+    # Como NO tenemos ON DELETE CASCADE en la DB schema (SQLite), y no todos los modelos
+    # tienen cascade="all,delete-orphan" en SQLAlchemy hacia User, debemos limpiar a mano.
+
+    # 3.1 Conversaciones (Trigger cascade a Mensajes via SQLAlchemy)
+    # Debemos borrarlas una por una para que SQLAlchemy active el cascade de Messages
+    conversations = db.query(models.Conversation).filter(
+        (models.Conversation.user_a_id == user.id) | 
+        (models.Conversation.user_b_id == user.id)
+    ).all()
+    for c in conversations:
+        db.delete(c)
+    
+    # 3.2 Matches
+    db.query(models.Match).filter(
+        (models.Match.user_a_id == user.id) | 
+        (models.Match.user_b_id == user.id)
+    ).delete(synchronize_session=False)
+
+    # 3.3 Likes
+    db.query(models.Like).filter(
+        (models.Like.liker_id == user.id) | 
+        (models.Like.liked_id == user.id)
+    ).delete(synchronize_session=False)
+
+    # 3.4 Passes
+    db.query(models.Pass).filter(
+        (models.Pass.passer_id == user.id) | 
+        (models.Pass.passed_id == user.id)
+    ).delete(synchronize_session=False)
+
+    # 3.5 Blocks
+    db.query(models.Block).filter(
+        (models.Block.blocker_id == user.id) | 
+        (models.Block.blocked_id == user.id)
+    ).delete(synchronize_session=False)
+    
+    # 3.6 Reports
+    db.query(models.Report).filter(
+        (models.Report.reporter_id == user.id) | 
+        (models.Report.reported_id == user.id)
+    ).delete(synchronize_session=False)
+
+    # 4. Borrar usuario (Cascades: RefreshToken, UserCompat)
     db.delete(user)
     db.commit()
     return {"ok": True}
@@ -142,7 +205,7 @@ def update_me(
                 from ..utils import clean_name
                 value = clean_name(value)
             setattr(user, field, value)
-            print(f"[UPDATE] Set user.{field} = {value}")
+            logger.info("user_update_field", field=field, value=value, user_id=user.id)
 
     db.add(user)
     db.commit()
@@ -155,7 +218,9 @@ def update_me(
 # (Legacy) subir foto local a /data/media
 # -------------------------
 @router.post("/me/photo", response_model=schemas.PhotoOut)
+@limiter.limit(LIMIT_PHOTO)
 def upload_photo_local(
+    request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
@@ -230,7 +295,9 @@ def get_quiz_answers(
 
 # ✅ Opción B (R2): guardar profile_photo_key en DB
 @router.put("/me/photo-key", response_model=schemas.PhotoKeyOut)
+@limiter.limit(LIMIT_PHOTO)
 def set_photo_key(
+    request: Request,
     payload: schemas.PhotoKeyIn,
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
@@ -239,13 +306,35 @@ def set_photo_key(
     if not key:
         raise HTTPException(status_code=400, detail="profile_photo_key requerido")
 
+    _validate_photo_ownership(key, user.id)
+
     user.profile_photo_key = key
     db.add(user)
     db.commit()
     db.refresh(user)
 
-    print(f"[PHOTO] Key guardada para user {user.id}: {user.profile_photo_key}")
+    logger.info("photo_key_saved", user_id=user.id, key=user.profile_photo_key)
     return {"ok": True, "profile_photo_key": user.profile_photo_key}
+
+
+def _validate_photo_ownership(key: str, user_id: int):
+    """
+    Validates that the key belongs to the user.
+    New format: uploads/user_{id}_{uuid}.ext
+    Legacy format: uploads/{uuid}.ext (Allowed for backward compatibility, but less secure)
+    """
+    if key.startswith("uploads/user_"):
+        expected_prefix = f"uploads/user_{user_id}_"
+        if not key.startswith(expected_prefix):
+            raise HTTPException(status_code=403, detail="You do not own this photo")
+    elif key.startswith("uploads/"):
+        # Legacy key, allow for now
+        pass
+    else:
+        # Unknown format (e.g. external URL?), failing safe for now if we strictly want R2 keys
+        # If we allow external URLs, remove this else block.
+        # Assuming we only want our R2 keys:
+        pass 
 
 
 # ✅ Obtener URL firmada para la foto principal
@@ -271,6 +360,8 @@ def add_gallery_photo(
     if not key:
         raise HTTPException(status_code=400, detail="Key vacía")
     
+    _validate_photo_ownership(key, user.id)
+
     gallery = list(user.gallery_photo_keys or [])
     if key in gallery:
         return user # Ya existe

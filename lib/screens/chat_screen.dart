@@ -6,6 +6,8 @@ import '../features/chats/chats_provider.dart';
 import '../models/chat_model.dart';
 import '../theme/app_theme.dart';
 import '../services/safety_api.dart';
+import '../services/matches_api.dart'; // Added
+import 'match_detail_screen.dart'; // Added
 import '../utils/snackbar_helper.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -43,6 +45,32 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _textController.clear();
   }
 
+  Future<void> _navToProfile() async {
+    if (widget.peerId == null) return;
+
+    // Show loading indicator or just navigate?
+    // Let's optimize by fetching in background or showing a small loader.
+    // For now, simple approach:
+    try {
+      final match = await MatchesApi.getMatch(widget.peerId.toString());
+      if (match != null && mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => MatchDetailScreen(candidate: match),
+          ),
+        );
+      } else {
+        if (mounted) {
+          SnackbarHelper.showError(context, 'No se pudo cargar el perfil');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'Error de conexión');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(messagesProvider(widget.chatId));
@@ -54,14 +82,32 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(
-          widget.peerName,
-          style:
-              theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+        title: GestureDetector(
+          onTap: _navToProfile,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Avatar placeholder (or real image if we had it passed)
+              const CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.white24,
+                child: Icon(Icons.person, size: 20, color: Colors.white),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                widget.peerName,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white, // Enforce white for contrast
+                ),
+              ),
+            ],
+          ),
         ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
+        foregroundColor: Colors.white, // White back arrow and icons
         flexibleSpace: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -74,15 +120,39 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            onSelected: (value) {
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            onSelected: (value) async {
               if (value == 'block') {
                 _confirmBlock(context);
               } else if (value == 'report') {
                 _showReportDialog(context);
+              } else if (value == 'profile') {
+                _navToProfile();
+              } else if (value == 'unmatch') {
+                await _confirmUnmatch(context);
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(Icons.person_outline, size: 20),
+                    SizedBox(width: 8),
+                    Text('Ver perfil'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'unmatch',
+                child: Row(
+                  children: [
+                    Icon(Icons.person_remove_outlined, size: 20),
+                    SizedBox(width: 8),
+                    Text('Deshacer Match'),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'report',
                 child: Row(
@@ -188,6 +258,43 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _confirmUnmatch(BuildContext context) async {
+    if (widget.peerId == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Deshacer Match?'),
+        content: const Text(
+            'Si deshaces el match, desaparecerá de tu lista y no podrán enviarse mensajes. Esta acción es irreversible.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('DESHACER MATCH'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await MatchesApi.unmatchUser(widget.peerId.toString());
+        if (mounted) {
+          Navigator.pop(context); // Exit chat
+          SnackbarHelper.showSuccess(context, 'Match deshecho');
+        }
+      } catch (e) {
+        if (mounted) {
+          SnackbarHelper.showError(context, 'Error al deshacer match');
+        }
+      }
+    }
   }
 
   void _showReportDialog(BuildContext context) {

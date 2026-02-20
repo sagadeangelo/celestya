@@ -8,13 +8,19 @@ from fastapi.staticfiles import StaticFiles
 from starlette.responses import JSONResponse
 
 from .database import Base, engine, SessionLocal, get_db, ensure_user_columns, DATABASE_URL
-from .routes import auth, users, matches, safety, chats, debug
+from .routes import auth, users, matches, safety, chats, debug, admin
 from . import models
 from .security import utcnow
 from datetime import timedelta
 import asyncio
 from .routes.upload import router as upload_router
 from .routes.media import router as media_router
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.errors import RateLimitExceeded
+from .limiter import limiter
+from .middleware import SecurityHeadersMiddleware
+from .config import validate_config
 
 # ✅ Base del proyecto (carpeta donde está /app)
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -29,13 +35,14 @@ MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(_default_media_root()))).resolve()
 # ✅ CORS
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*")
 
-# ✅ Logging
-import logging
+from .logging_conf import configure_logging
+import structlog
+import uuid
 import time
 from sqlalchemy import text
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("api")
+configure_logging()
+logger = structlog.get_logger("api")
 
 
 async def daily_cleanup_job():
@@ -81,7 +88,20 @@ def create_app() -> FastAPI:
     # Migración manual segura (SQLite)
     ensure_user_columns(engine)
 
-    app = FastAPI(title="Celestya API", version="0.1.0")
+    env = os.getenv("ENV", "production").lower()
+    is_prod = env == "production"
+    
+    app = FastAPI(
+        title="Celestya API", 
+        version="0.1.0",
+        docs_url=None if is_prod else "/docs",
+        redoc_url=None if is_prod else "/redoc",
+        openapi_url=None if is_prod else "/openapi.json"
+    )
+    
+    # ✅ Rate Limiting
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
     @app.get("/")
     def read_root():
@@ -123,6 +143,12 @@ def create_app() -> FastAPI:
 
         # Iniciar el job de limpieza en segundo plano
         asyncio.create_task(daily_cleanup_job())
+        
+        # Validar configuración
+        validate_config()
+
+    # ✅ Security Headers
+    app.add_middleware(SecurityHeadersMiddleware)
 
     # ✅ CORS
     app.add_middleware(
@@ -133,33 +159,44 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # ✅ Middleware logging + catch 500
+    # ✅ Middleware logging + catch 500 (Structlog)
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
+        structlog.contextvars.clear_contextvars()
+        structlog.contextvars.bind_contextvars(request_id=request_id)
+
         start_time = time.time()
         try:
             response = await call_next(request)
             process_time = (time.time() - start_time) * 1000
 
-            if response.status_code >= 400:
-                logger.error(
-                    f"❌ {request.method} {request.url.path} - {response.status_code} - {process_time:.2f}ms"
-                )
+            # Log completion
+            logger.info(
+                "request_finished",
+                method=request.method,
+                path=request.url.path,
+                status=response.status_code,
+                latency=f"{process_time:.2f}ms"
+            )
             return response
         except Exception as e:
             import traceback
-
+            process_time = (time.time() - start_time) * 1000
+            
+            error_id = uuid.uuid4().hex
             logger.error(
-                "INTERNAL SERVER ERROR: %s\n%s",
-                str(e),
-                traceback.format_exc(),
+                "request_failed",
+                error=str(e),
+                traceback=traceback.format_exc(),
+                error_id=error_id,
+                latency=f"{process_time:.2f}ms"
             )
             return JSONResponse(
                 status_code=500,
                 content={
                     "detail": "Internal Server Error",
-                    "error_id": str(int(time.time())),
-                    "trace": str(e),
+                    "error_id": error_id,
                 },
             )
 
@@ -192,6 +229,9 @@ def create_app() -> FastAPI:
 
     # ✅ Debug (Protected)
     app.include_router(debug.router, prefix="/_debug", tags=["debug"])
+    
+    # ✅ Admin (Protected) - Persistence Checks
+    app.include_router(admin.router, prefix="/admin", tags=["admin"])
 
     # ✅ Static files (local / media persistente)
     MEDIA_ROOT.mkdir(parents=True, exist_ok=True)

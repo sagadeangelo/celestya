@@ -12,7 +12,8 @@ from jose import jwt, JWTError
 # ============================
 JWT_SECRET = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY") or ""
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "2880"))  # 48h
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))  # Reduced to 60m
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))  # 30 days
 
 if not JWT_SECRET:
     raise RuntimeError("JWT secret missing: set JWT_SECRET (or SECRET_KEY) in environment.")
@@ -73,3 +74,11 @@ def make_token() -> str:
 
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def create_refresh_token() -> str:
+    """
+    Generates a secure random string for refresh token.
+    Does NOT return a JWT.
+    """
+    return secrets.token_urlsafe(64)

@@ -156,10 +156,10 @@ const List<CompatQuestion> compatQuestions = [
     id: 'q13_body_type',
     title: '¿Cómo describirías tu complexión física?',
     options: [
-      CompatOption(id: 'athletic', label: 'Atlética / Tonificada 🏃'),
-      CompatOption(id: 'average', label: 'Promedio ⚖️'),
-      CompatOption(id: 'curvy', label: 'Con Curvas / Robusto 🍑'),
-      CompatOption(id: 'other', label: 'Fuera de talla ✨'),
+      CompatOption(id: 'ectomorph', label: 'Delgado (Ectomorfo) 📏'),
+      CompatOption(id: 'mesomorph', label: 'Atlético (Mesomorfo) 🏋️'),
+      CompatOption(id: 'average', label: 'Promedio 🧍'),
+      CompatOption(id: 'endomorph', label: 'Robusto (Endomorfo) 🧸'),
     ],
   ),
 ];

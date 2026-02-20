@@ -7,6 +7,8 @@ import 'theme/app_theme.dart';
 import 'screens/auth_gate.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
+import 'screens/forgot_password_screen.dart';
+import 'screens/reset_password_screen.dart';
 import 'screens/splash_screen.dart'; // 👈 Importar Splash
 import 'app_shell.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -86,6 +88,17 @@ class _CelestyaAppState extends ConsumerState<CelestyaApp> {
           }
         }
       },
+      onResetPassword: (token) {
+        final context = navigatorKey.currentContext;
+        if (context != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ResetPasswordScreen(token: token),
+            ),
+          );
+        }
+      },
     );
   }
 
@@ -111,6 +124,7 @@ class _CelestyaAppState extends ConsumerState<CelestyaApp> {
       routes: {
         '/auth_gate': (_) => const AuthGate(),
         '/login': (_) => const LoginScreen(),
+        '/forgot-password': (_) => const ForgotPasswordScreen(),
         '/register': (_) => const RegisterScreen(),
         '/app': (_) => const AppShell(),
       },

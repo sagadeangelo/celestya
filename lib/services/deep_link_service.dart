@@ -4,13 +4,17 @@ import 'package:app_links/app_links.dart';
 class DeepLinkService {
   static StreamSubscription<Uri>? _sub;
   static Function(String? email, String? token)? _onVerified;
+  static Function(String token)? _onResetPassword;
 
   static final AppLinks _appLinks = AppLinks();
 
   /// Call once at app startup
-  static Future<void> initialize(
-      {required Function(String? email, String? token) onVerified}) async {
+  static Future<void> initialize({
+    required Function(String? email, String? token) onVerified,
+    required Function(String token) onResetPassword,
+  }) async {
     _onVerified = onVerified;
+    _onResetPassword = onResetPassword;
     await _initAppLinks();
   }
 
@@ -37,7 +41,10 @@ class DeepLinkService {
   static void _handleDeepLinkUri(Uri uri) {
     // Handles:
     // celestya://verified?email=...&token=...
+    // celestya://reset-password?token=...
+    // celestya://auth/reset-password?token=... (Host: auth, Path: /reset-password)
 
+    // 1. Verification
     if (uri.scheme == 'celestya' && uri.host == 'verified') {
       final email = uri.queryParameters['email'];
       final token = uri.queryParameters['token'];
@@ -45,12 +52,33 @@ class DeepLinkService {
       if (_onVerified != null) {
         _onVerified!(email, token);
       }
+      return;
+    }
+
+    // 2. Reset Password
+    bool isReset = false;
+    if (uri.scheme == 'celestya') {
+      if (uri.host == 'reset-password') {
+        isReset = true;
+      } else if ((uri.host == 'auth' || uri.host == '') &&
+          uri.path == '/reset-password') {
+        isReset = true;
+      }
+    }
+
+    if (isReset) {
+      final token = uri.queryParameters['token'];
+      if (token != null && token.isNotEmpty && _onResetPassword != null) {
+        _onResetPassword!(token);
+      }
     }
   }
 
   static Future<void> dispose() async {
     await _sub?.cancel();
     _sub = null;
+    _sub = null;
     _onVerified = null;
+    _onResetPassword = null;
   }
 }

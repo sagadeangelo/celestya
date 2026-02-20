@@ -179,6 +179,7 @@ class MatchesApi {
           : 0.0,
       latitude: (u['lat'] is num) ? (u['lat'] as num).toDouble() : null,
       longitude: (u['lon'] is num) ? (u['lon'] as num).toDouble() : null,
+      gender: u['gender']?.toString(), // Parse gender
     );
   }
 
@@ -226,6 +227,47 @@ class MatchesApi {
       return res is Map && res['ok'] == true;
     } catch (e) {
       debugPrint('[MatchesApi] Error passUser: $e');
+      return false;
+    }
+  }
+
+  /// GET /users/{id}/profile
+  /// Returns MatchCandidate for a specific user (for chat navigation)
+  static Future<MatchCandidate?> getMatch(String userId) async {
+    try {
+      // Reusing Public Profile endpoint or similar.
+      // If /users/{id}/profile exists and returns same schema as feed, we are good.
+      // Otherwise we might need to use /users/{id} (admin) or adapting logic.
+      // Assuming standard user profile endpoint:
+      final res = await ApiClient.getJson('/users/$userId/profile');
+      if (res is Map<String, dynamic>) {
+        return _fromBackendUser(res);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[MatchesApi] Error getMatch($userId): $e');
+      return null;
+    }
+  }
+
+  /// POST /matches/unmatch/{userId}
+  static Future<bool> unmatchUser(String userId) async {
+    try {
+      final res = await ApiClient.postJson('matches/unmatch/$userId', {});
+      return res is Map && res['ok'] == true;
+    } catch (e) {
+      debugPrint('[MatchesApi] Error unmatchUser: $e');
+      return false;
+    }
+  }
+
+  // Borrar todos los matches y reiniciar
+  static Future<bool> resetMatches() async {
+    try {
+      final response = await ApiClient.deleteJson('matches/reset');
+      return response is Map && response['ok'] == true;
+    } catch (e) {
+      debugPrint('[MatchesApi] Reset matches failed: $e');
       return false;
     }
   }

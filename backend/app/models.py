@@ -11,7 +11,7 @@ from sqlalchemy import (
     func,
     UniqueConstraint,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.types import JSON  # ✅ para guardar respuestas como dict/list
 
 from .database import Base
@@ -75,10 +75,15 @@ class User(Base):
     email_verification_link_expires_at = Column(DateTime(timezone=True), nullable=True)
     email_verification_link_used = Column(Boolean, default=False, nullable=False)  # One-time use
 
+    # Password Reset
+    password_reset_token_hash = Column(String(255), nullable=True)
+    password_reset_expires_at = Column(DateTime(timezone=True), nullable=True)
+
     # Timestamps útiles
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     # ✅ recomendado: que tenga default al crear y update automático
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    last_seen = Column(DateTime(timezone=True), nullable=True)
 
     # Relación 1 a 1 con compat
     compat = relationship(
@@ -244,3 +249,16 @@ class Pass(Base):
     __table_args__ = (
         UniqueConstraint('passer_id', 'passed_id', name='uq_pass_pair'),
     )
+
+
+class RefreshToken(Base):
+    __tablename__ = "refresh_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    token_hash = Column(String(255), nullable=False, index=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User", backref=backref("refresh_tokens", cascade="all, delete-orphan"))

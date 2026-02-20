@@ -133,7 +133,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       final res = await AuthApi.verifyEmail(state.email!, code);
-      if (res['ok'] == true && res.containsKey('access_token')) {
+      // Backend returns directly the token dict: {"access_token": "...", ...}
+      // It does NOT return "ok": true in this specific endpoint.
+      if (res.containsKey('access_token')) {
         final token = res['access_token'];
         await AuthService.saveToken(token);
 
@@ -143,7 +145,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
         state = AuthState.loggedIn(token);
       } else {
-        state = state.copyWith(isLoading: false, errorMessage: res['message']);
+        // Should not happen if ApiClient throws on error, but safekeeping
+        state = state.copyWith(
+            isLoading: false,
+            errorMessage: res['message'] ?? 'Error desconocido');
       }
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());

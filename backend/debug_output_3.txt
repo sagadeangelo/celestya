@@ -1,0 +1,32 @@
+2026-02-19 10:02:20 [info     ] startup_db_config              database_url=sqlite:///./celestya.db
+2026-02-19 10:02:20 [info     ] startup_sqlite_found           path=./celestya.db size_bytes=155648
+
+DEBUGGING MATCHES FOR: user_461524dd@example.com (ID: 10)
+   Gender: None, ShowMe: None
+   Location: None, None
+   Email Verified: True
+
+--- 1. EXCLUSIONS (DB State) ---
+   Likes Given: 0
+   Passes Given: 0
+   Confirmed Matches: 0
+
+--- 2. FILTERING PIPELINE ---
+   Total other users in DB: 26
+   After excluding Liked/Passed/Blocked: 26
+   After Email Verified (Required=False): 26
+   After Photo Check (Required=False): 26
+   After Gender Filter (Looking for None): 26
+   After Reciprocity (They must look for None): 26
+
+--- 3. SAMPLE CANDIDATES (10) ---
+   - Test User (user_117a5b25@example.com) | None -> seeks None | Unknown dist
+   - Test User (user_c7928622@example.com) | None -> seeks None | Unknown dist
+   - Test User (user_27e95314@example.com) | None -> seeks None | Unknown dist
+   - Test User (user_424632ba@example.com) | None -> seeks None | Unknown dist
+   - Test User (user_d166e43e@example.com) | None -> seeks None | Unknown dist
+   - Test User (user_809f34ec@example.com) | None -> seeks None | Unknown dist
+   - Test User (user_a9972f2f@example.com) | None -> seeks None | Unknown dist
+   - Test (ua9af7@example.com) | None -> seeks None | Unknown dist
+   - Test (u49b84@example.com) | None -> seeks None | Unknown dist
+   - Test (ub2b6e@example.com) | None -> seeks None | Unknown dist

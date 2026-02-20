@@ -163,3 +163,45 @@ def check_email_status(
             return json.loads(body)
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+@router.get("/stats")
+def get_debug_stats(
+    key: str | None = None,
+    email: str | None = None,
+    db: Session = Depends(get_db),
+):
+    # Temp auth
+    if key != "temp123":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    
+    from sqlalchemy import text
+    try:
+        total = db.execute(text("SELECT count(*) FROM users")).scalar()
+        females = db.execute(text("SELECT count(*) FROM users WHERE gender='female'")).scalar()
+        males = db.execute(text("SELECT count(*) FROM users WHERE gender='male'")).scalar()
+        fem_photos = db.execute(text("SELECT count(*) FROM users WHERE gender='female' AND (profile_photo_key IS NOT NULL OR photo_path IS NOT NULL)")).scalar()
+        
+        # Latest 3 users or specific email
+        if email:
+            # Search by email
+            query = text("SELECT id, name, email, gender, show_me, lat, lon, age_bucket, birthdate, profile_photo_key FROM users WHERE email = :email")
+            users_raw = db.execute(query, {"email": email}).fetchall()
+        else:
+            users_raw = db.execute(text("SELECT id, name, email, gender, show_me, lat, lon, age_bucket, birthdate, profile_photo_key FROM users ORDER BY id DESC LIMIT 3")).fetchall()
+        
+        users_list = []
+        for u in users_raw:
+            users_list.append({
+                "id": u[0], "name": u[1], "email": u[2], "gender": u[3], "show_me": u[4], 
+                "loc": f"{u[5]},{u[6]}", "age_bucket": u[7], "birthdate": str(u[8]), "photo": u[9]
+            })
+
+        return {
+            "total": total,
+            "females": females,
+            "males": males,
+            "females_with_photo": fem_photos,
+            "users": users_list
+        }
+    except Exception as e:
+        return {"error": str(e)}

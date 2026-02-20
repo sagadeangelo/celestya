@@ -24,6 +24,21 @@
   <key>CFBundlePackageType</key>
   <string>APPL</string>
 
+  <!-- Deep Links -->
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>CFBundleURLName</key>
+      <string>com.celestya.app</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>celestya</string>
+      </array>
+    </dict>
+  </array>
+
   <!-- Flutter versioning -->
   <key>CFBundleShortVersionString</key>
   <string>$(FLUTTER_BUILD_NAME)</string>

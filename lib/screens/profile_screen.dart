@@ -181,14 +181,6 @@ class ProfileScreen extends ConsumerWidget {
               }
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.edit, size: 20),
-            onPressed: () {
-              final profile = profileAsync.valueOrNull;
-              _openEditProfile(context, ref, profile);
-            },
-            tooltip: 'Editar perfil',
-          ),
         ],
       ),
       body: Stack(
@@ -252,7 +244,7 @@ class ProfileScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildProfileHeader(context, profile, hasProfile),
+                      _buildProfileHeader(context, ref, profile, hasProfile),
                       const SizedBox(height: 24),
                       if (profile.photoUrls.isNotEmpty) ...[
                         _buildPhotoGallery(context, profile),
@@ -338,8 +330,8 @@ class ProfileScreen extends ConsumerWidget {
 
   // --- Celestial Profile Components ---
 
-  Widget _buildProfileHeader(
-      BuildContext context, UserProfile profile, bool hasProfile) {
+  Widget _buildProfileHeader(BuildContext context, WidgetRef ref,
+      UserProfile profile, bool hasProfile) {
     final displayName =
         hasProfile ? formatDisplayName(profile) : 'Completa tu perfil';
 
@@ -351,11 +343,7 @@ class ProfileScreen extends ConsumerWidget {
       children: [
         GestureDetector(
           onTap: () {
-            final mainUrl =
-                profile.photoUrls.isNotEmpty ? profile.photoUrls.first : null;
-            if (mainUrl != null) {
-              ImageViewerScreen.open(context, [mainUrl], 0);
-            }
+            _openEditProfile(context, ref, profile);
           },
           child: Stack(
             alignment: Alignment.bottomRight,
@@ -403,15 +391,36 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.all(8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: CelestyaColors.celestialBlue,
-                  shape: BoxShape.circle,
-                  border:
-                      Border.all(color: CelestyaColors.spaceBlack, width: 3),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                child: const Icon(Icons.edit, size: 16, color: Colors.white),
-              )
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.edit, size: 14, color: Colors.white),
+                    SizedBox(width: 4),
+                    Text(
+                      "Editar",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -809,16 +818,37 @@ class ProfileScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             if (profile.stakeWard != null)
-              _buildInfoRow(context, Icons.location_city, 'Estaca/Barrio',
+              _buildInlineInfoRow(context, Icons.location_city, 'Estaca/Barrio',
                   profile.stakeWard!),
             if (profile.missionServed != null) ...[
               const SizedBox(height: 12),
-              _buildInfoRow(context, Icons.flight_takeoff, 'Misión',
+              _buildInlineInfoRow(context, Icons.flight_takeoff, 'Misión',
                   profile.missionServed!),
             ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildInlineInfoRow(
+      BuildContext context, IconData icon, String label, String value) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon,
+            size: 20, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+        const SizedBox(width: 8),
+        Text('$label: ',
+            style: TextStyle(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                fontWeight: FontWeight.w500)),
+        Expanded(
+          child: Text(value,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+              overflow: TextOverflow.ellipsis),
+        ),
+      ],
     );
   }
 

@@ -1,0 +1,22 @@
+2026-02-19 09:57:26 [info     ] startup_db_config              database_url=sqlite:///./celestya.db
+2026-02-19 09:57:26 [info     ] startup_sqlite_found           path=./celestya.db size_bytes=155648
+
+DEBUGGING MATCHES FOR: user_461524dd@example.com (ID: 10)
+   Gender: None, ShowMe: None
+   Location: None, None
+   Email Verified: True
+
+--- 1. EXCLUSIONS (DB State) ---
+   Likes Given: 0
+   Passes Given: 0
+   Confirmed Matches: 0
+
+--- 2. FILTERING PIPELINE ---
+   Total other users in DB: 26
+   After excluding Liked/Passed/Blocked: 26
+   After Email Verified (Required=True): 26
+   After Photo Check (Required=True): 0
+   After Gender Filter (Looking for None): 0
+   After Reciprocity (They must look for None): 0
+
+--- 3. SAMPLE CANDIDATES (0) ---

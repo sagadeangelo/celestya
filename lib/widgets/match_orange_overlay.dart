@@ -1,48 +1,7 @@
 // lib/widgets/match_orange_overlay.dart
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-
-/// Custom clipper that creates a half-circle orange slice shape
-class OrangeSliceClipper extends CustomClipper<Path> {
-  final bool isLeftHalf;
-
-  const OrangeSliceClipper({required this.isLeftHalf});
-
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    final radius = size.height / 2;
-
-    if (isLeftHalf) {
-      // Left half - arc from top to bottom on the left side
-      path.moveTo(size.width, 0);
-      path.lineTo(0, 0);
-      path.arcToPoint(
-        Offset(0, size.height),
-        radius: Radius.circular(radius),
-        clockwise: false,
-      );
-      path.lineTo(size.width, size.height);
-      path.close();
-    } else {
-      // Right half - arc from top to bottom on the right side
-      path.moveTo(0, 0);
-      path.lineTo(size.width, 0);
-      path.arcToPoint(
-        Offset(size.width, size.height),
-        radius: Radius.circular(radius),
-        clockwise: true,
-      );
-      path.lineTo(0, size.height);
-      path.close();
-    }
-
-    return path;
-  }
-
-  @override
-  bool shouldReclip(OrangeSliceClipper oldClipper) => false;
-}
+import '../theme/app_theme.dart';
 
 /// Custom clipper that creates a perfect half-circle
 class CircleHalfClipper extends CustomClipper<Path> {
@@ -114,14 +73,8 @@ class ConfettiPainter extends CustomPainter {
       canvas.translate(x, y);
       canvas.rotate(particle.rotation * progress * 2 * math.pi);
 
-      // Draw particle as a small rectangle
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromCenter(center: Offset.zero, width: 8, height: 12),
-          const Radius.circular(2),
-        ),
-        paint,
-      );
+      // Draw particle as a small heart or circle
+      canvas.drawCircle(Offset.zero, 4, paint);
 
       canvas.restore();
     }
@@ -149,7 +102,7 @@ class _ConfettiParticle {
   });
 }
 
-/// Full-screen overlay that shows the "Media Naranja" match animation
+/// Full-screen overlay that shows the "It's a Match" animation (Pink/Purple style)
 class MatchOrangeOverlay extends StatefulWidget {
   final String userPhotoUrl;
   final String matchPhotoUrl;
@@ -258,14 +211,13 @@ class _MatchOrangeOverlayState extends State<MatchOrangeOverlay>
   List<_ConfettiParticle> _generateConfetti() {
     final random = math.Random();
     final colors = [
-      Colors.pink.shade300,
-      Colors.purple.shade300,
-      Colors.orange.shade300,
-      Colors.yellow.shade300,
-      Colors.red.shade300,
+      CelestyaColors.nebulaPink,
+      CelestyaColors.mysticalPurple,
+      CelestyaColors.starlightGold,
+      Colors.white,
     ];
 
-    return List.generate(30, (index) {
+    return List.generate(40, (index) {
       return _ConfettiParticle(
         startX: 0.3 + random.nextDouble() * 0.4, // Center area
         startY: 0.3 + random.nextDouble() * 0.2,
@@ -290,14 +242,31 @@ class _MatchOrangeOverlayState extends State<MatchOrangeOverlay>
     final size = MediaQuery.of(context).size;
 
     // Un poco más chico para evitar overflow en pantallas pequeñas
-    final orangeSize = math.min(size.width * 0.7, size.height * 0.35);
+    final circleSize = math.min(size.width * 0.7, size.height * 0.35);
 
     return Scaffold(
-      backgroundColor: Colors.black.withOpacity(0.85),
+      backgroundColor: Colors.black.withOpacity(0.9),
       body: GestureDetector(
         onTap: () => Navigator.of(context).pop(),
         child: Stack(
           children: [
+            // Background Gradient
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.black,
+                      CelestyaColors.nebulaPink.withOpacity(0.2),
+                      Colors.black,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
             // Confetti layer
             Positioned.fill(
               child: CustomPaint(
@@ -315,100 +284,76 @@ class _MatchOrangeOverlayState extends State<MatchOrangeOverlay>
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Orange halves + naranja real de fondo
+                    // Circles (User + Match)
                     AnimatedBuilder(
                       animation: _pulseAnimation,
                       builder: (context, child) {
                         return Transform.scale(
                           scale: _pulseAnimation.value,
                           child: SizedBox(
-                            width: orangeSize,
-                            height: orangeSize,
+                            width: circleSize,
+                            height: circleSize,
                             child: Stack(
                               alignment: Alignment.center,
                               children: [
-                                // 🔸 NARANJA REAL DE FONDO (TU IMAGEN)
-                                ClipOval(
-                                  child: Image.asset(
-                                    'assets/orange_texture.png',
-                                    width: orangeSize,
-                                    height: orangeSize,
-                                    fit: BoxFit.cover,
+                                // Heart/Circle GLOW
+                                Container(
+                                  width: circleSize,
+                                  height: circleSize,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: CelestyaColors.nebulaPink
+                                            .withOpacity(0.6),
+                                        blurRadius: 50,
+                                        spreadRadius: 10,
+                                      ),
+                                    ],
                                   ),
                                 ),
 
                                 // Left half (user)
                                 SlideTransition(
                                   position: _leftSlideAnimation,
-                                  child: _OrangeHalf(
+                                  child: _ProfileHalf(
                                     photoUrl: widget.userPhotoUrl,
                                     isLeftHalf: true,
-                                    size: orangeSize,
+                                    size: circleSize,
                                   ),
                                 ),
 
                                 // Right half (match)
                                 SlideTransition(
                                   position: _rightSlideAnimation,
-                                  child: _OrangeHalf(
+                                  child: _ProfileHalf(
                                     photoUrl: widget.matchPhotoUrl,
                                     isLeftHalf: false,
-                                    size: orangeSize,
+                                    size: circleSize,
                                   ),
                                 ),
 
-                                // Texto "MATCH" y "¿Tu media naranja?" sobre la naranja
+                                // ICONS / HEART CENTER
                                 FadeTransition(
                                   opacity: _fadeAnimation,
                                   child: Container(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        // Texto "MATCH"
-                                        Text(
-                                          'MATCH',
-                                          style: TextStyle(
-                                            fontSize: orangeSize * 0.15,
-                                            fontWeight: FontWeight.w900,
-                                            color: Colors.white,
-                                            letterSpacing: 4,
-                                            shadows: [
-                                              Shadow(
-                                                blurRadius: 20,
-                                                color: Colors.black
-                                                    .withOpacity(0.8),
-                                                offset: const Offset(0, 4),
-                                              ),
-                                              Shadow(
-                                                blurRadius: 10,
-                                                color: Colors.orange.shade900,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        // Texto "¿Tu media naranja?"
-                                        Text(
-                                          '¿Tu media naranja?',
-                                          style: TextStyle(
-                                            fontSize: orangeSize * 0.06,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                            letterSpacing: 1,
-                                            shadows: [
-                                              Shadow(
-                                                blurRadius: 15,
-                                                color: Colors.black
-                                                    .withOpacity(0.7),
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: CelestyaColors.nebulaPink
+                                              .withOpacity(0.5),
+                                          blurRadius: 12,
+                                          spreadRadius: 2,
+                                        )
                                       ],
+                                    ),
+                                    child: const Icon(
+                                      Icons.favorite_rounded,
+                                      color: CelestyaColors.nebulaPink,
+                                      size: 40,
                                     ),
                                   ),
                                 ),
@@ -419,36 +364,63 @@ class _MatchOrangeOverlayState extends State<MatchOrangeOverlay>
                       },
                     ),
 
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 48),
 
-                    // Texto informativo debajo de la naranja
+                    // "It's a Match!" Text
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: Column(
                         children: [
                           Text(
-                            'Tú y ${widget.matchName} se gustaron',
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 22,
+                            "It's a Match!",
+                            style: TextStyle(
+                              fontFamily: 'Pacifico', // O la fuente que uses
+                              fontSize: 48,
+                              color: Colors.white,
+                              shadows: [
+                                Shadow(
+                                  blurRadius: 20,
+                                  color: CelestyaColors.nebulaPink,
+                                  offset: const Offset(0, 0),
                                 ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 16),
                           Text(
-                            'Toca para continuar',
+                            'Tú y ${widget.matchName} se gustaron mutuamente',
                             textAlign: TextAlign.center,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: Colors.white54,
-                                  fontSize: 14,
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                      color: Colors.white70,
+                                      fontSize: 16,
+                                    ),
+                          ),
+                          const SizedBox(height: 40),
+
+                          // Action Buttons
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: CelestyaColors.nebulaPink,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 40, vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                            child: const Text(
+                              'ENVIAR MENSAJE',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('SEGUIR DESCUBRIENDO',
+                                style: TextStyle(color: Colors.white70)),
                           ),
                         ],
                       ),
@@ -464,13 +436,13 @@ class _MatchOrangeOverlayState extends State<MatchOrangeOverlay>
   }
 }
 
-/// Widget that represents one half of the orange
-class _OrangeHalf extends StatelessWidget {
+/// Widget that represents one half of the profile circle
+class _ProfileHalf extends StatelessWidget {
   final String photoUrl;
   final bool isLeftHalf;
   final double size;
 
-  const _OrangeHalf({
+  const _ProfileHalf({
     required this.photoUrl,
     required this.isLeftHalf,
     required this.size,
@@ -479,24 +451,24 @@ class _OrangeHalf extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: size, // Ahora es cuadrado para formar un círculo perfecto
+      width: size,
       height: size,
       child: ClipPath(
         clipper: CircleHalfClipper(isLeftHalf: isLeftHalf),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // FOTO DE LA PERSONA (hombre / mujer) - RECORTADA EN SEMICÍRCULO
+            // PROFILE PHOTO
             Image.network(
               photoUrl,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Container(
-                color: Colors.grey.shade300,
+                color: Colors.grey.shade800,
                 child: const Icon(Icons.person, size: 60, color: Colors.white),
               ),
             ),
 
-            // Overlay de color naranja ligero
+            // OVERLAY GRADIENT
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -505,16 +477,16 @@ class _OrangeHalf extends StatelessWidget {
                   end:
                       isLeftHalf ? Alignment.centerRight : Alignment.centerLeft,
                   colors: [
-                    Colors.orange.withOpacity(0.25),
-                    Colors.deepOrange.withOpacity(0.15),
+                    CelestyaColors.nebulaPink.withOpacity(0.3),
+                    CelestyaColors.mysticalPurple.withOpacity(0.1),
                   ],
                 ),
               ),
             ),
 
-            // Segmentos blancos de la naranja (opcional, puedes comentar si no quieres las líneas)
+            // BORDER LINE (Inner)
             CustomPaint(
-              painter: _OrangeSegmentPainter(isLeftHalf: isLeftHalf),
+              painter: _BorderPainter(isLeftHalf: isLeftHalf),
             ),
           ],
         ),
@@ -523,36 +495,32 @@ class _OrangeHalf extends StatelessWidget {
   }
 }
 
-/// Painter for orange segment lines
-class _OrangeSegmentPainter extends CustomPainter {
+class _BorderPainter extends CustomPainter {
   final bool isLeftHalf;
 
-  _OrangeSegmentPainter({required this.isLeftHalf});
+  _BorderPainter({required this.isLeftHalf});
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.25)
-      ..strokeWidth = 2
+      ..color = Colors.white
+      ..strokeWidth = 4
       ..style = PaintingStyle.stroke;
 
-    final center = Offset(
-      isLeftHalf ? size.width : 0,
-      size.height / 2,
-    );
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.height / 2;
 
-    // Draw radial lines from center to edge
-    for (int i = 0; i < 5; i++) {
-      final angle = (i / 4) * math.pi - math.pi / 2;
-      final endX = center.dx + math.cos(angle) * size.width;
-      final endY = center.dy + math.sin(angle) * size.height / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
 
-      canvas.drawLine(center, Offset(endX, endY), paint);
+    if (isLeftHalf) {
+      canvas.drawArc(rect, math.pi / 2, math.pi, false, paint);
+    } else {
+      canvas.drawArc(rect, -math.pi / 2, math.pi, false, paint);
     }
   }
 
   @override
-  bool shouldRepaint(_OrangeSegmentPainter oldDelegate) => false;
+  bool shouldRepaint(_BorderPainter oldDelegate) => false;
 }
 
 /// Helper function to show the match animation

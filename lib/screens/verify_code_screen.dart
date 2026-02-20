@@ -26,7 +26,21 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
   void _verify() async {
     if (!_formKey.currentState!.validate()) return;
     final code = _codeCtrl.text.trim();
+
+    // Attempt verification
     await ref.read(authProvider.notifier).verifyCode(code);
+
+    if (!mounted) return;
+
+    final authState = ref.read(authProvider);
+    if (authState.status == AuthStatus.loggedIn) {
+      // Success: Navigate to AuthGate to route to AppShell
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('¡Verificación exitosa! Entrando...')),
+      );
+      Navigator.pushNamedAndRemoveUntil(
+          context, '/auth_gate', (route) => false);
+    }
   }
 
   void _resendCode() async {
@@ -53,6 +67,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -70,12 +85,14 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            const Icon(Icons.mark_email_read_outlined, size: 80, color: Colors.blue),
+            const Icon(Icons.mark_email_read_outlined,
+                size: 80, color: Colors.blue),
             const SizedBox(height: 24),
             Text(
               "Ingresa el código que enviamos a tu correo",
               textAlign: TextAlign.center,
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
@@ -92,14 +109,32 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
               maxLength: 6,
-              style: const TextStyle(fontSize: 32, letterSpacing: 12, fontWeight: FontWeight.bold),
-              decoration: const InputDecoration(
+              // Explicit color to avoid visibility issues
+              style: TextStyle(
+                fontSize: 32,
+                letterSpacing: 12,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black,
+              ),
+              decoration: InputDecoration(
                 counterText: "",
                 hintText: "000000",
-                border: OutlineInputBorder(),
+                hintStyle: TextStyle(
+                  color: isDark ? Colors.white24 : Colors.black12,
+                ),
+                border: const OutlineInputBorder(),
+                filled: true,
+                fillColor: theme.cardColor,
               ),
+              onChanged: (val) {
+                // Auto-submit when user types 6 digits
+                if (val.length == 6) {
+                  _verify();
+                }
+              },
               validator: (v) {
-                if (v == null || v.length != 6) return "El código debe ser de 6 dígitos";
+                if (v == null || v.length != 6)
+                  return "El código debe ser de 6 dígitos";
                 if (int.tryParse(v) == null) return "Solo números";
                 return null;
               },
@@ -115,21 +150,29 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
             const SizedBox(height: 32),
             FilledButton(
               onPressed: authState.isLoading ? null : _verify,
-              style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+              style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16)),
               child: authState.isLoading
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
                   : const Text("Verificar código"),
             ),
             const SizedBox(height: 16),
             TextButton(
               onPressed: _isResending ? null : _resendCode,
               child: _isResending
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2))
                   : const Text("Reenviar código"),
             ),
             const SizedBox(height: 8),
             Text(
-              "También puedes verificar haciendo clic en el botón del correo que te enviamos.",
+              "También puedes verificar haciendo clic en el enlace del correo.",
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
             ),

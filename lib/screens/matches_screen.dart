@@ -1,24 +1,14 @@
 // lib/screens/matches_screen.dart
-import 'package:appinio_swiper/appinio_swiper.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/discover_provider.dart';
 
 import '../data/match_candidate.dart';
-
-import '../features/matching/presentation/widgets/filter_bottom_sheet.dart';
 import '../widgets/empty_state.dart';
-import '../widgets/premium_match_card.dart';
 import '../widgets/starry_background.dart';
 import '../theme/app_theme.dart';
-
 import '../services/matches_api.dart';
-import '../widgets/match_orange_overlay.dart';
-import '../features/profile/presentation/providers/profile_provider.dart';
-
-// Mock user photo URL (para animación de match, cámbialo luego por tu foto real)
-const String kMockUserPhotoUrl =
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1887&auto=format&fit=crop';
+import 'match_detail_screen.dart';
 
 /// Provider: carga MATCHES CONFIRMADOS desde backend
 final confirmedMatchesProvider =
@@ -26,416 +16,289 @@ final confirmedMatchesProvider =
   return MatchesApi.getConfirmed();
 });
 
-class MatchesScreen extends ConsumerStatefulWidget {
+class MatchesScreen extends ConsumerWidget {
   const MatchesScreen({super.key});
 
   @override
-  ConsumerState<MatchesScreen> createState() => _MatchesScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final confirmedAsync = ref.watch(confirmedMatchesProvider);
 
-class _MatchesScreenState extends ConsumerState<MatchesScreen> {
-  final AppinioSwiperController _swiperController = AppinioSwiperController();
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: const Text('Matches',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: () => ref.refresh(confirmedMatchesProvider),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          Container(
+            decoration:
+                const BoxDecoration(gradient: CelestyaColors.softSpaceGradient),
+          ),
+          const Positioned.fill(
+            child: StarryBackground(
+                numberOfStars: 80, baseColor: Color(0xFFE0E0E0)),
+          ),
+          SafeArea(
+            child: confirmedAsync.when(
+              loading: () => const Center(
+                  child: CircularProgressIndicator(color: Colors.white)),
+              error: (e, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: EmptyState(
+                    icon: Icons.error_outline,
+                    title: 'Error al cargar',
+                    message: e.toString(),
+                    actionLabel: 'Reintentar',
+                    onAction: () => ref.refresh(confirmedMatchesProvider),
+                  ),
+                ),
+              ),
+              data: (matches) {
+                if (matches.isEmpty) {
+                  return Stack(
+                    children: [
+                      Center(
+                        child: EmptyState(
+                          icon: Icons.favorite_border,
+                          title: 'Aún no tienes matches',
+                          message:
+                              'Cuando tú y otra persona se gusten, aparecerán aquí para chatear.',
+                          actionLabel: null,
+                          onAction: null,
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: _ResetButton(ref: ref),
+                        ),
+                      ),
+                    ],
+                  );
+                }
 
-  int _activeIndex = 0; // índice del card actualmente “top”
-  double _swipeOffset = 0;
-
-  @override
-  void dispose() {
-    _swiperController.dispose();
-    super.dispose();
-  }
-
-  void _showFilters(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const FilterBottomSheet(),
+                return Column(
+                  children: [
+                    Expanded(
+                      child: GridView.builder(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 20),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.75,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemCount: matches.length,
+                        itemBuilder: (context, index) {
+                          final match = matches[index];
+                          return _MatchGridItem(match: match);
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      child: _ResetButton(ref: ref),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
+}
 
-  void _handleLike(MatchCandidate m) {
-    // Get current user profile
-    final userProfile = ref.read(profileProvider).asData?.value;
-    final userPhotoUrl = userProfile?.photoUrls.firstOrNull ?? '';
+class _ResetButton extends StatelessWidget {
+  final WidgetRef ref;
+  const _ResetButton({required this.ref});
 
-    try {
-      // ignore: undefined_function
-      showMatchAnimation(
-        context: context,
-        userPhotoUrl:
-            userPhotoUrl.isNotEmpty ? userPhotoUrl : kMockUserPhotoUrl,
-        matchPhotoUrl: m.photoUrl ?? '',
-        matchName: m.name,
-      );
-    } catch (_) {}
+  Future<void> _confirmReset(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Reiniciar matches?'),
+        content: const Text(
+          'Esto borrará TODOS tus matches, conversaciones y likes enviados. '
+          'Volverás a ver a las personas que ya pasaste o diste like.\n\n'
+          'Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Borrar todo'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final success = await MatchesApi.resetMatches();
+      if (success) {
+        ref.refresh(confirmedMatchesProvider);
+        // Force refresh discovery feed to show users again
+        ref.read(discoverProvider.notifier).loadCandidates(forceRefresh: true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al reiniciar matches')),
+        );
+      }
+    }
   }
-
-  // REMOVED: Filter logic no longer needed in MatchesScreen
-  // MatchesScreen shows ONLY confirmed matches, no filtering required
 
   @override
   Widget build(BuildContext context) {
-    final confirmedAsync = ref.watch(confirmedMatchesProvider);
-
-    return confirmedAsync.when(
-      loading: () => Scaffold(
-        extendBodyBehindAppBar: true,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.tune_rounded, color: Colors.white),
-            onPressed: () => _showFilters(context),
-          ),
-        ),
-        body: Stack(
-          children: [
-            Container(
-                decoration:
-                    BoxDecoration(gradient: CelestyaColors.softSpaceGradient)),
-            const Positioned.fill(
-              child: StarryBackground(
-                numberOfStars: 120,
-                baseColor: Color(0xFFE0E0E0),
-              ),
-            ),
-            const Center(child: CircularProgressIndicator()),
-          ],
-        ),
+    return TextButton.icon(
+      onPressed: () => _confirmReset(context),
+      icon: Icon(Icons.delete_forever, color: Colors.white.withOpacity(0.7)),
+      label: Text(
+        'Borrar todo y empezar de nuevo',
+        style: TextStyle(color: Colors.white.withOpacity(0.7)),
       ),
-      error: (e, _) => Scaffold(
-        extendBodyBehindAppBar: true,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.tune_rounded, color: Colors.white),
-            onPressed: () => _showFilters(context),
-          ),
-        ),
-        body: Stack(
-          children: [
-            Container(
-                decoration:
-                    BoxDecoration(gradient: CelestyaColors.softSpaceGradient)),
-            const Positioned.fill(
-              child: StarryBackground(
-                  numberOfStars: 120, baseColor: Color(0xFFE0E0E0)),
-            ),
-            Center(
-              child: EmptyState(
-                icon: Icons.wifi_off_rounded,
-                title: 'No pudimos cargar sugerencias',
-                message: 'Revisa tu conexión o el backend.\n\nError: $e',
-                actionLabel: 'Reintentar',
-                onAction: () => ref.refresh(confirmedMatchesProvider),
-              ),
-            ),
-          ],
-        ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        backgroundColor: Colors.black26,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
-      data: (confirmedMatches) {
-        // No filtering - just show confirmed matches as-is
-
-        if (confirmedMatches.isEmpty) {
-          return Scaffold(
-            extendBodyBehindAppBar: true,
-            appBar: AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              // No filter button
-            ),
-            body: Stack(
-              children: [
-                Container(
-                    decoration: BoxDecoration(
-                        gradient: CelestyaColors.softSpaceGradient)),
-                const Positioned.fill(
-                  child: StarryBackground(
-                      numberOfStars: 100, baseColor: Color(0xFFE0E0E0)),
-                ),
-                Center(
-                  child: EmptyState(
-                    icon: Icons.favorite_border_rounded,
-                    title: 'Aún no tienes matches',
-                    message:
-                        'Ve a Descubrir para encontrar personas que te gusten.\nCuando haya un match mutuo, aparecerán aquí.',
-                    actionLabel: null,
-                    onAction: null,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return Scaffold(
-          extendBodyBehindAppBar: true,
-          appBar: AppBar(
-            title: const Text('Matches',
-                style: TextStyle(fontWeight: FontWeight.w300)),
-            centerTitle: true,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            // No filter button for confirmed matches
-            actions: [
-              IconButton(
-                style: IconButton.styleFrom(backgroundColor: Colors.black12),
-                icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-                onPressed: () => ref.refresh(confirmedMatchesProvider),
-              ),
-            ],
-          ),
-          body: Stack(
-            children: [
-              Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.black54, Colors.transparent],
-                    stops: [0.0, 0.3],
-                  ),
-                ),
-              ),
-              Positioned.fill(
-                child: AppinioSwiper(
-                  key: ValueKey(confirmedMatches.length),
-                  controller: _swiperController,
-                  cardCount: confirmedMatches.length,
-                  swipeOptions: const SwipeOptions.only(
-                    left: true,
-                    right: true,
-                    up: false,
-                    down: false,
-                  ),
-                  backgroundCardCount: 2,
-                  onCardPositionChanged: (position) {
-                    setState(() => _swipeOffset = position.offset.dx);
-                  },
-                  onSwipeCancelled: (_) => setState(() => _swipeOffset = 0),
-                  onSwipeEnd: (prev, target, activity) {
-                    HapticFeedback.lightImpact();
-                    setState(() {
-                      _activeIndex = target;
-                      _swipeOffset = 0;
-                    });
-
-                    // Si fue swipe right, puedes disparar animación
-                    final act = activity.toString().toLowerCase();
-                    if (act.contains('right')) {
-                      final swiped =
-                          (prev >= 0 && prev < confirmedMatches.length)
-                              ? confirmedMatches[prev]
-                              : null;
-                      if (swiped != null) _handleLike(swiped);
-                    }
-                  },
-                  onEnd: () {
-                    // Si se acabó el stack, recarga
-                    ref.refresh(confirmedMatchesProvider);
-                  },
-                  cardBuilder: (context, index) {
-                    final candidate = confirmedMatches[index];
-                    final card = PremiumMatchCard(candidate: candidate);
-
-                    final double opacity =
-                        (_swipeOffset.abs() / 150).clamp(0.0, 0.8);
-                    final bool isRight = _swipeOffset > 10;
-                    final bool isLeft = _swipeOffset < -10;
-
-                    // Overlay solo para la carta activa
-                    final bool isActiveCard = index == _activeIndex;
-
-                    return Stack(
-                      children: [
-                        card,
-                        if (isActiveCard && (isRight || isLeft))
-                          Positioned.fill(
-                            child: IgnorePointer(
-                              child: Opacity(
-                                opacity: opacity,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(28),
-                                    color: isRight
-                                        ? Colors.green.withOpacity(0.3)
-                                        : Colors.red.withOpacity(0.3),
-                                  ),
-                                  child: Center(
-                                    child: Icon(
-                                      isRight
-                                          ? Icons.check_circle_outline_rounded
-                                          : Icons.cancel_outlined,
-                                      size: 100,
-                                      color: Colors.white,
-                                      shadows: [
-                                        Shadow(
-                                          color: Colors.black.withOpacity(0.4),
-                                          blurRadius: 15,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 40,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _ActionButton(
-                      icon: Icons.close_rounded,
-                      color: const Color(0xFFFF4B4B),
-                      size: 60,
-                      onPressed: () {
-                        HapticFeedback.selectionClick();
-                        _swiperController.swipeLeft();
-                      },
-                    ),
-                    _PulsingHeartButton(
-                      onPressed: () {
-                        HapticFeedback.mediumImpact();
-                        final current = (_activeIndex >= 0 &&
-                                _activeIndex < confirmedMatches.length)
-                            ? confirmedMatches[_activeIndex]
-                            : null;
-                        if (current != null) _handleLike(current);
-                        _swiperController.swipeRight();
-                      },
-                    ),
-                    _ActionButton(
-                      icon: Icons.star_rounded,
-                      color: const Color(0xFF62BAF3),
-                      size: 50,
-                      onPressed: () {
-                        HapticFeedback.selectionClick();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Superlike pronto...")),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final double size;
-  final VoidCallback onPressed;
+class _MatchGridItem extends StatelessWidget {
+  final MatchCandidate match;
 
-  const _ActionButton({
-    required this.icon,
-    required this.color,
-    required this.size,
-    required this.onPressed,
-  });
+  const _MatchGridItem({required this.match});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onPressed,
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => MatchDetailScreen(candidate: match),
+          ),
+        );
+      },
       child: Container(
-        width: size,
-        height: size,
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withOpacity(0.1),
-          border: Border.all(color: Colors.white.withOpacity(0.2)),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.2),
-              blurRadius: 10,
+              blurRadius: 8,
               offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: Icon(icon, color: color, size: size * 0.45),
-      ),
-    );
-  }
-}
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Photo
+              match.photoUrl != null
+                  ? Image.network(
+                      match.photoUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: Colors.grey.shade800,
+                        child: const Icon(Icons.person,
+                            color: Colors.white70, size: 40),
+                      ),
+                    )
+                  : Container(
+                      color: Colors.grey.shade800,
+                      child: const Icon(Icons.person,
+                          color: Colors.white70, size: 40),
+                    ),
 
-class _PulsingHeartButton extends StatefulWidget {
-  final VoidCallback onPressed;
-
-  const _PulsingHeartButton({required this.onPressed});
-
-  @override
-  State<_PulsingHeartButton> createState() => _PulsingHeartButtonState();
-}
-
-class _PulsingHeartButtonState extends State<_PulsingHeartButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final scale = 1.0 + (_controller.value * 0.1);
-        return Transform.scale(
-          scale: scale,
-          child: GestureDetector(
-            onTap: widget.onPressed,
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFF006E), Color(0xFFFFBE0B)],
-                  begin: Alignment.bottomLeft,
-                  end: Alignment.topRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF006E).withOpacity(0.4),
-                    blurRadius: 20 * scale,
-                    spreadRadius: 2 * scale,
+              // Gradient Overlay
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.8),
+                    ],
+                    stops: const [0.6, 1.0],
                   ),
-                ],
+                ),
               ),
-              child: const Icon(Icons.favorite_rounded,
-                  color: Colors.white, size: 36),
-            ),
+
+              // Info
+              Positioned(
+                bottom: 12,
+                left: 12,
+                right: 12,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      match.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (match.city.isNotEmpty)
+                      Text(
+                        match.city,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 12,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+
+              // Open Chat Action (Top Right)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.chat_bubble_outline,
+                      color: Colors.white, size: 16),
+                ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

@@ -4,6 +4,10 @@ import '../theme/app_theme.dart';
 import '../providers/discover_provider.dart';
 import '../features/matching/presentation/providers/filter_provider.dart';
 import '../features/matching/presentation/widgets/filter_bottom_sheet.dart';
+import '../widgets/match_orange_overlay.dart';
+import '../features/profile/presentation/providers/profile_provider.dart';
+
+import 'match_detail_screen.dart'; // Import detail screen
 
 class DiscoverScreen extends ConsumerStatefulWidget {
   const DiscoverScreen({super.key});
@@ -17,6 +21,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
   bool _hasStarted = false;
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
+
+  // --- SVIPE LOGIC ---
+  Offset _dragOffset = Offset.zero;
+  double _angle = 0.0;
+  Size _screenSize = Size.zero; // To normalize drag
 
   @override
   void initState() {
@@ -268,6 +277,8 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     }
 
     final candidate = state.candidates.first;
+    // Pass screen size for easier calculations
+    _screenSize = MediaQuery.of(context).size;
     return _buildCandidateCard(candidate);
   }
 
@@ -281,6 +292,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
         final cardHeight = availableHeight - 140;
         final cardWidth = availableWidth * 0.95; // Wider card
 
+        // Calculate rotation based on horizontal drag
+        final rotation = _angle * 0.2; // Dampen rotation
+        final centerOffset = _dragOffset;
+
         return Center(
           child: Padding(
             padding:
@@ -288,175 +303,246 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                // Swipeable Photo Card
-                SizedBox(
-                  height: cardHeight,
-                  width: cardWidth,
-                  child: Dismissible(
-                    key: Key(candidate.id),
-                    direction: DismissDirection.horizontal,
-                    onDismissed: (direction) {
-                      if (direction == DismissDirection.endToStart) {
-                        // Swipe Left -> Pass
-                        ref
-                            .read(discoverProvider.notifier)
-                            .passCandidate(candidate.id);
-                      } else {
-                        // Swipe Right -> Like
-                        ref
-                            .read(discoverProvider.notifier)
-                            .likeCandidate(candidate.id)
-                            .then((matched) {
-                          if (matched && mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('¡Es un match! 💕'),
-                                backgroundColor: CelestyaColors.nebulaPink,
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          }
-                        });
-                      }
-                    },
-                    background: Container(
-                      decoration: BoxDecoration(
-                        color: CelestyaColors.nebulaPink,
-                        borderRadius: BorderRadius.circular(20),
+                // Swipeable Photo Card Area
+                GestureDetector(
+                  onPanStart: (details) {
+                    // Start drag
+                  },
+                  onPanUpdate: (details) {
+                    setState(() {
+                      _dragOffset += details.delta;
+                      // Calculate angle based on x offset relative to screen width
+                      _angle = 45 * _dragOffset.dx / _screenSize.width;
+                    });
+                  },
+                  onPanEnd: (details) {
+                    _handleDragEnd(details, candidate);
+                  },
+                  onTap: () async {
+                    // Navigate to detail screen
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => MatchDetailScreen(candidate: candidate),
                       ),
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.only(left: 30),
-                      child: const Icon(Icons.favorite,
-                          color: Colors.white, size: 50),
-                    ),
-                    secondaryBackground: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.only(right: 30),
-                      child: const Icon(Icons.close,
-                          color: Colors.white, size: 50),
-                    ),
-                    child: Container(
-                      width: cardWidth,
-                      height: cardHeight,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                CelestyaColors.mysticalPurple.withOpacity(0.3),
-                            blurRadius: 20,
-                            spreadRadius: 5,
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            // Photo
-                            candidate.photoUrl != null
-                                ? Image.network(
-                                    candidate.photoUrl!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) =>
-                                        _buildPlaceholder(),
-                                  )
-                                : _buildPlaceholder(),
+                    );
 
-                            // Compatibility Bar Overlay (Top)
-                            Positioned(
-                              top: 16,
-                              left: 16,
-                              right: 16,
-                              child: Row(
+                    // Refresh profile when coming back, in case of changes
+                    // Using read here as we are in a callback
+                    if (mounted) {
+                      ref.read(profileProvider.notifier).loadProfile();
+                    }
+                  },
+                  child: Transform.translate(
+                    offset: centerOffset,
+                    child: Transform.rotate(
+                      angle: rotation * 3.14159 / 180,
+                      child: Stack(
+                        children: [
+                          // 1. The Card Content
+                          Container(
+                            width: cardWidth,
+                            height: cardHeight,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: CelestyaColors.mysticalPurple
+                                      .withOpacity(0.3),
+                                  blurRadius: 20,
+                                  spreadRadius: 5,
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Stack(
+                                fit: StackFit.expand,
                                 children: [
-                                  Expanded(
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: LinearProgressIndicator(
-                                        value: candidate.compatibility ??
-                                            0.5, // Default 50% if null
-                                        backgroundColor: Colors.black26,
-                                        valueColor:
-                                            const AlwaysStoppedAnimation<Color>(
-                                          CelestyaColors.nebulaPink,
+                                  // Photo
+                                  candidate.photoUrl != null
+                                      ? Image.network(
+                                          candidate.photoUrl!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              _buildPlaceholder(),
+                                        )
+                                      : _buildPlaceholder(),
+
+                                  // Compatibility Bar Overlay (Top)
+                                  Positioned(
+                                    top: 16,
+                                    left: 16,
+                                    right: 16,
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            child: LinearProgressIndicator(
+                                              value: candidate.compatibility ??
+                                                  0.5, // Default 50% if null
+                                              backgroundColor: Colors.black26,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                candidate.gender == 'male'
+                                                    ? CelestyaColors.auroraTeal
+                                                    : CelestyaColors.nebulaPink,
+                                              ),
+                                              minHeight: 8,
+                                            ),
+                                          ),
                                         ),
-                                        minHeight: 8,
-                                      ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black45,
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            '${((candidate.compatibility ?? 0.5) * 100).toInt()}% Match',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black45,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      '${((candidate.compatibility ?? 0.5) * 100).toInt()}% Match',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
+
+                                  // Gradient overlay (Bottom Info)
+                                  Positioned(
+                                    bottom: 0,
+                                    left: 0,
+                                    right: 0,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.bottomCenter,
+                                          end: Alignment.topCenter,
+                                          colors: [
+                                            Colors.black.withOpacity(0.9),
+                                            Colors.transparent,
+                                          ],
+                                          stops: const [0.0, 0.8],
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${candidate.name}${candidate.age != null ? ", ${candidate.age}" : ""}',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 32,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          if (candidate.city.isNotEmpty)
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.only(top: 4),
+                                              child: Text(
+                                                candidate.city,
+                                                style: const TextStyle(
+                                                  color: Colors.white70,
+                                                  fontSize: 18,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
+                          ),
 
-                            // Gradient overlay (Bottom Info)
-                            Positioned(
-                              bottom: 0,
-                              left: 0,
-                              right: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.bottomCenter,
-                                    end: Alignment.topCenter,
-                                    colors: [
-                                      Colors.black.withOpacity(0.9),
-                                      Colors.transparent,
-                                    ],
-                                    stops: const [0.0, 0.8],
+                          // 2. OVERLAYS (Visual Feedback)
+                          // LIKE Overlay (Green/Heart) -> Drag Right
+                          if (_dragOffset.dx > 0)
+                            Positioned.fill(
+                              child: Opacity(
+                                opacity: (_dragOffset.dx / 150)
+                                    .clamp(0.0, 0.8), // Fade in
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    color: CelestyaColors.auroraTeal
+                                        .withOpacity(0.4),
                                   ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${candidate.name}${candidate.age != null ? ", ${candidate.age}" : ""}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    if (candidate.city.isNotEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 4),
-                                        child: Text(
-                                          candidate.city,
-                                          style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 18,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
+                                  child: const Center(
+                                    child: Icon(Icons.favorite,
+                                        color: Colors.white, size: 100),
+                                  ),
                                 ),
                               ),
                             ),
-                          ],
-                        ),
+
+                          // NOPE Overlay (Red/X) -> Drag Left
+                          if (_dragOffset.dx < 0)
+                            Positioned.fill(
+                              child: Opacity(
+                                opacity: (-_dragOffset.dx / 150)
+                                    .clamp(0.0, 0.8), // Fade in
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    color: Colors.red.withOpacity(0.4),
+                                  ),
+                                  child: const Center(
+                                    child: Icon(Icons.close,
+                                        color: Colors.white, size: 100),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                          // SUPER LIKE Overlay (Gold/Sun) -> Drag Up
+                          if (_dragOffset.dy < 0 &&
+                              _dragOffset.dy.abs() > _dragOffset.dx.abs())
+                            Positioned.fill(
+                              child: Opacity(
+                                opacity: (-_dragOffset.dy / 150)
+                                    .clamp(0.0, 0.8), // Fade in
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    color: CelestyaColors.starlightGold
+                                        .withOpacity(0.4),
+                                  ),
+                                  child: const Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.wb_sunny_rounded,
+                                            color: Colors.white, size: 80),
+                                        SizedBox(height: 10),
+                                        Text(
+                                          "SUPER LIKE",
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 2,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),
@@ -464,7 +550,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
 
                 const SizedBox(height: 16),
 
-                // Action Buttons
+                // Action Buttons (Keep existing ones)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -472,33 +558,27 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                     _buildActionButton(
                       icon: Icons.close,
                       color: Colors.red,
-                      onPressed: () async {
-                        await ref
-                            .read(discoverProvider.notifier)
-                            .passCandidate(candidate.id);
-                      },
+                      onPressed: () => _triggerSwipeLeft(candidate),
                     ),
 
-                    const SizedBox(width: 40),
+                    const SizedBox(width: 24),
+
+                    // Super Like Button (Sun)
+                    _buildActionButton(
+                      icon: Icons.wb_sunny_rounded,
+                      color: CelestyaColors.starlightGold,
+                      onPressed: () => _triggerSwipeUp(candidate),
+                      size: 60, // Slightly smaller
+                      iconSize: 30,
+                    ),
+
+                    const SizedBox(width: 24),
 
                     // Like Button
                     _buildActionButton(
                       icon: Icons.favorite,
                       color: CelestyaColors.nebulaPink,
-                      onPressed: () async {
-                        final matched = await ref
-                            .read(discoverProvider.notifier)
-                            .likeCandidate(candidate.id);
-                        if (matched && mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('¡Es un match! 💕'),
-                              backgroundColor: CelestyaColors.nebulaPink,
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      },
+                      onPressed: () => _triggerSwipeRight(candidate),
                     ),
                   ],
                 ),
@@ -508,6 +588,99 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
         );
       },
     );
+  }
+
+  void _handleDragEnd(DragEndDetails details, candidate) async {
+    final threshold = 100.0; // Distance to trigger action
+    final velocity = details.velocity.pixelsPerSecond;
+
+    // Check for swipe directions
+    if (_dragOffset.dx > threshold || velocity.dx > 800) {
+      // Swipe Right -> Like
+      _animateSwipe(const Offset(500, 0));
+      await Future.delayed(const Duration(milliseconds: 200));
+      _handleLike(candidate);
+      _resetCard();
+    } else if (_dragOffset.dx < -threshold || velocity.dx < -800) {
+      // Swipe Left -> Pass
+      _animateSwipe(const Offset(-500, 0));
+      await Future.delayed(const Duration(milliseconds: 200));
+      ref.read(discoverProvider.notifier).passCandidate(candidate.id);
+      _resetCard();
+    } else if (_dragOffset.dy < -threshold || velocity.dy < -800) {
+      // Swipe Up -> Super Like
+      _animateSwipe(const Offset(0, -600));
+      await Future.delayed(const Duration(milliseconds: 200));
+      _handleLike(
+          candidate); // For now, maps to Like. Backend logic can change.
+      _resetCard();
+    } else {
+      // Bounce back
+      setState(() {
+        _dragOffset = Offset.zero;
+        _angle = 0.0;
+      });
+    }
+  }
+
+  void _triggerSwipeRight(candidate) async {
+    setState(() {
+      _dragOffset = const Offset(500, 0); // Simulate right swipe
+    });
+    await Future.delayed(const Duration(milliseconds: 200));
+    _handleLike(candidate);
+    _resetCard();
+  }
+
+  void _triggerSwipeLeft(candidate) async {
+    setState(() {
+      _dragOffset = const Offset(-500, 0); // Simulate left swipe
+    });
+    await Future.delayed(const Duration(milliseconds: 200));
+    ref.read(discoverProvider.notifier).passCandidate(candidate.id);
+    _resetCard();
+  }
+
+  void _triggerSwipeUp(candidate) async {
+    setState(() {
+      _dragOffset = const Offset(0, -600); // Simulate up swipe
+    });
+    await Future.delayed(const Duration(milliseconds: 200));
+    _handleLike(candidate);
+    _resetCard();
+  }
+
+  void _animateSwipe(Offset target) {
+    setState(() {
+      _dragOffset = target;
+    });
+  }
+
+  void _resetCard() {
+    setState(() {
+      _dragOffset = Offset.zero;
+      _angle = 0.0;
+    });
+  }
+
+  Future<void> _handleLike(candidate) async {
+    final matched =
+        await ref.read(discoverProvider.notifier).likeCandidate(candidate.id);
+
+    if (matched && mounted) {
+      // Get current user photo
+      final userProfile = ref.read(profileProvider).asData?.value;
+      // Prefer profilePhotoKey (if we can resolve it) or photoUrls
+      // Since MatchAnimation needs a URL, use photoUrls.firstOrNull
+      final myPhoto = userProfile?.photoUrls.indexed.firstOrNull?.$2 ?? '';
+
+      await showMatchAnimation(
+        context: context,
+        userPhotoUrl: myPhoto ?? '',
+        matchPhotoUrl: candidate.photoUrl ?? '',
+        matchName: candidate.name,
+      );
+    }
   }
 
   Widget _buildPlaceholder() {
@@ -523,12 +696,14 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     required IconData icon,
     required Color color,
     required VoidCallback onPressed,
+    double size = 70,
+    double iconSize = 35,
   }) {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
-        width: 70,
-        height: 70,
+        width: size,
+        height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: Colors.white,
@@ -540,7 +715,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
             ),
           ],
         ),
-        child: Icon(icon, size: 35, color: color),
+        child: Icon(icon, size: iconSize, color: color),
       ),
     );
   }
@@ -560,6 +735,17 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
   void _showDiagnostics(BuildContext context, DiscoverState state) {
     // Get user profile for diagnostics (if available)
     // For now, just show basic info
+    final profileNotifier = ref.read(profileProvider.notifier);
+    // Since profileProvider.notifier is managing UserProfile?, we need to check the state
+    final userProfile = ref.read(profileProvider);
+
+    if (userProfile.value == null) {
+      // Access the value from AsyncValue
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please complete your profile first")),
+      );
+      return;
+    }
     final filters = ref.read(filterProvider);
 
     showDialog(

@@ -38,6 +38,11 @@ class RegisterResponse(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    refresh_token: Optional[str] = None
+
+
+class RefreshTokenIn(BaseModel):
+    refresh_token: str
 
 
 # ----------------------------
@@ -86,6 +91,8 @@ class UserOut(BaseModel):
     name: Optional[str] = None
     birthdate: Optional[date] = None
     email_verified: bool
+    is_online: bool = False
+    last_seen: Optional[datetime] = None
 
     city: Optional[str] = None
     stake: Optional[str] = None
@@ -156,6 +163,18 @@ class VerifyEmailOut(BaseModel):
     ok: bool = True
     message: str
     access_token: Optional[str] = None
+
+
+# ----------------------------
+# Password Reset
+# ----------------------------
+class ForgotPasswordIn(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordIn(BaseModel):
+    token: str
+    new_password: str = Field(min_length=6, max_length=72)
 
 
 # ----------------------------
