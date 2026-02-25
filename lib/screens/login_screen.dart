@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
+import '../l10n/app_localizations.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -33,10 +34,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Iniciar sesión"),
+        title: Text(loc.login),
         elevation: 0,
       ),
       body: Form(
@@ -59,7 +61,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              "Celestya",
+              loc.appTitle,
               textAlign: TextAlign.center,
               style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
@@ -79,9 +81,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             TextFormField(
               controller: _emailCtrl,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: "Correo electrónico",
-                prefixIcon: Icon(Icons.email_outlined),
+              decoration: InputDecoration(
+                labelText: loc.email,
+                prefixIcon: const Icon(Icons.email_outlined),
               ),
               validator: (v) {
                 if (v == null || v.trim().isEmpty) {
@@ -97,7 +99,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               controller: _passCtrl,
               obscureText: _obscurePassword,
               decoration: InputDecoration(
-                labelText: "Contraseña",
+                labelText: loc.password,
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
                   icon: Icon(_obscurePassword
@@ -147,7 +149,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       width: 20,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white))
-                  : const Text("Entrar"),
+                  : Text(loc.login),
             ),
             const SizedBox(height: 12),
 
@@ -182,7 +184,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               onPressed: () => Navigator.pushNamed(context, '/register'),
               style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16)),
-              child: const Text("Crear cuenta"),
+              child: Text(loc.register),
             ),
           ],
         ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 import '../utils/snackbar_helper.dart';
+import '../l10n/app_localizations.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -127,10 +128,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Crear cuenta"),
+        title: Text(loc.register),
         elevation: 0,
       ),
       body: Form(
@@ -205,9 +207,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             TextFormField(
               controller: _emailCtrl,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                  labelText: 'Correo electrónico *',
-                  prefixIcon: Icon(Icons.email_outlined)),
+              decoration: InputDecoration(
+                  labelText: loc.email + ' *',
+                  prefixIcon: const Icon(Icons.email_outlined)),
               validator: (v) {
                 if (v == null || v.trim().isEmpty) {
                   return 'El correo es requerido';
@@ -265,7 +267,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               controller: _passCtrl,
               obscureText: _obscurePassword,
               decoration: InputDecoration(
-                labelText: 'Contraseña *',
+                labelText: loc.password + ' *',
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
                   icon: Icon(_obscurePassword
@@ -358,7 +360,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       width: 20,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white))
-                  : const Text('Crear cuenta'),
+                  : Text(loc.register),
             ),
             const SizedBox(height: 16),
 

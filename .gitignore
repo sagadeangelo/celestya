@@ -123,6 +123,9 @@ linux/build/
 *.p12
 *.cer
 *.mobileprovision
+TOKEN_SECRET_CELESTYA_GITHUB.txt
+*.secret
+*.env
 
 ###############################################################################
 # Firebase (opcional: comenta si SÍ quieres subirlos)

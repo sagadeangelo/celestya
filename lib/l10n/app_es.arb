@@ -1,0 +1,19 @@
+{
+  "@@locale": "es",
+  "appTitle": "Celestya",
+  "email": "Correo",
+  "password": "Contraseña",
+  "login": "Iniciar Sesión",
+  "register": "Registrar",
+  "profile": "Perfil",
+  "language": "Idioma",
+  "spanish": "Español",
+  "english": "English",
+  "savedToast": "Guardado",
+  "verified": "Verificado",
+  "pendingUpload": "Subida Pendiente",
+  "pendingReview": "Revisión Pendiente",
+  "rejected": "Rechazado",
+  "networkError": "Error de Red",
+  "retry": "Reintentar"
+}

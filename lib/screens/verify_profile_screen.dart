@@ -12,6 +12,7 @@ import '../theme/app_theme.dart';
 import '../services/users_api.dart';
 import '../features/profile/presentation/providers/profile_provider.dart';
 import '../widgets/starry_background.dart';
+import '../l10n/app_localizations.dart';
 
 class VerifyProfileScreen extends ConsumerStatefulWidget {
   const VerifyProfileScreen({super.key});
@@ -523,7 +524,7 @@ class _VerifyProfileScreenState extends ConsumerState<VerifyProfileScreen>
             onPressed: _startVerification,
             style: ElevatedButton.styleFrom(
                 backgroundColor: CelestyaColors.mysticalPurple),
-            child: const Text('Intentar de nuevo'),
+            child: Text(AppLocalizations.of(context)!.retry),
           ),
         ],
       ),

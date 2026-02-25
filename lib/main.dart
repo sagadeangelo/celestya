@@ -3,6 +3,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'services/language_service.dart';
+import 'providers/language_provider.dart';
+
 import 'theme/app_theme.dart';
 import 'screens/auth_gate.dart';
 import 'screens/login_screen.dart';
@@ -46,13 +52,16 @@ void main() async {
   // 4. Initial sync attempt
   SyncService.triggerSync();
 
-  // 5. Initialize Deep Link Service (will be set up in app)
-  // DeepLinkService is initialized in CelestyaApp to access context
+  // 5. Initialize SharedPreferences for Language
+  final prefs = await SharedPreferences.getInstance();
+  final languageService = LanguageService(prefs);
 
   runApp(
-    // Envolver la app con ProviderScope para habilitar Riverpod
-    const ProviderScope(
-      child: CelestyaApp(),
+    ProviderScope(
+      overrides: [
+        languageServiceProvider.overrideWithValue(languageService),
+      ],
+      child: const CelestyaApp(),
     ),
   );
 }
@@ -110,7 +119,20 @@ class _CelestyaAppState extends ConsumerState<CelestyaApp> {
 
   @override
   Widget build(BuildContext context) {
+    final currentLocale = ref.watch(languageProvider);
+
     return MaterialApp(
+      locale: currentLocale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('es'),
+        Locale('en'),
+      ],
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Celestya',

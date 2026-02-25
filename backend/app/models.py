@@ -61,6 +61,9 @@ class User(Base):
     # Valores esperados: 'male' | 'female' (puedes expandir a futuro)
     gender = Column(String, nullable=True)   # Sexo del usuario
     show_me = Column(String, nullable=True)  # A quién quiere ver
+    
+    # Idioma (i18n)
+    language = Column(String(2), nullable=True)  # "es" | "en"
 
     # Foto (legacy local + R2)
     photo_path = Column(String, nullable=True)  # legacy: ruta local ./media/...

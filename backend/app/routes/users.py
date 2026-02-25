@@ -97,6 +97,7 @@ def user_to_out(user: models.User) -> dict:
         "verification_status": user.verification_status,
         "rejection_reason": getattr(user.verifications[-1], "rejection_reason", None) if user.verifications and user.verification_status == "rejected" else None,
         "active_instruction": getattr(user.verifications[-1], "instruction", None) if user.verifications and user.verification_status == "pending_upload" else None,
+        "language": user.language,
     }
 
 
@@ -215,6 +216,22 @@ def update_me(
     db.refresh(user)
     return user_to_out(user)
 
+
+@router.patch("/me/language")
+def update_language(
+    payload: schemas.LanguageUpdateIn,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    lang = payload.language.lower()
+    if lang not in ["es", "en"]:
+        raise HTTPException(status_code=422, detail={"detail": "Invalid language", "code": "INVALID_LANGUAGE"})
+    
+    user.language = lang
+    db.add(user)
+    db.commit()
+    
+    return {"ok": True, "language": lang}
 
 
 # -------------------------

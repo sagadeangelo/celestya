@@ -6,7 +6,7 @@ import '../features/matching/presentation/providers/filter_provider.dart';
 import '../features/matching/presentation/widgets/filter_bottom_sheet.dart';
 import '../widgets/match_orange_overlay.dart';
 import '../features/profile/presentation/providers/profile_provider.dart';
-
+import '../l10n/app_localizations.dart';
 import 'match_detail_screen.dart'; // Import detail screen
 
 class DiscoverScreen extends ConsumerStatefulWidget {
@@ -205,6 +205,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
 
     // ... rest of _buildBody logic ...
     if (state.error != null) {
+      final loc = AppLocalizations.of(context)!;
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -216,7 +217,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
             ElevatedButton(
               onPressed: () =>
                   ref.read(discoverProvider.notifier).loadCandidates(),
-              child: const Text('Reintentar'),
+              child: Text(loc.retry),
             ),
           ],
         ),

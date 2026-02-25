@@ -187,6 +187,11 @@ class ApiClient {
       _request('PUT', path,
           body: body, withAuth: withAuth, customHeaders: headers);
 
+  static Future<dynamic> patchJson(String path, dynamic body,
+          {bool withAuth = true, Map<String, String>? headers}) =>
+      _request('PATCH', path,
+          body: body, withAuth: withAuth, customHeaders: headers);
+
   static Future<dynamic> getJson(String path,
           {bool withAuth = true, Map<String, String>? headers}) =>
       _request('GET', path, withAuth: withAuth, customHeaders: headers);

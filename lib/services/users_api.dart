@@ -209,6 +209,15 @@ class UsersApi {
     return UserProfile.fromJson(json);
   }
 
+  /// Cambia el idioma en el backend
+  static Future<void> setMyLanguage(String lang) async {
+    await ApiClient.patchJson(
+      '/users/me/language',
+      {'language': lang},
+      withAuth: true,
+    );
+  }
+
   // --- BATCH SIGNED URLS & CACHE ---
   static final Map<String, String> _signedUrlCache = {};
 

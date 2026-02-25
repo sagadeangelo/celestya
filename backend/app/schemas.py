@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Literal
 
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
@@ -134,6 +134,13 @@ class UserOut(BaseModel):
     verification_status: str = Field("none", alias="verificationStatus")
     rejection_reason: Optional[str] = Field(None, alias="rejectionReason")
     active_instruction: Optional[str] = Field(None, alias="activeInstruction")
+    
+    # Idioma
+    language: Optional[str] = None
+
+
+class LanguageUpdateIn(BaseModel):
+    language: Literal["es", "en"]
 
 
 class PhotoOut(BaseModel):

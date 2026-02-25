@@ -11,6 +11,8 @@ import 'verify_profile_screen.dart';
 
 import '../services/api_client.dart';
 import '../providers/auth_provider.dart';
+import '../providers/language_provider.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/starry_background.dart';
 import '../widgets/voice_intro_widget.dart';
@@ -178,10 +180,64 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     }
   }
 
+  void _showLanguagePicker(
+      BuildContext context, WidgetRef ref, AppLocalizations loc) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: CelestyaColors.deepNight,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  loc.language,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ListTile(
+                title: Text(loc.spanish,
+                    style: const TextStyle(color: Colors.white)),
+                onTap: () {
+                  ref.read(languageProvider.notifier).setLocale('es');
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(loc.savedToast)),
+                  );
+                },
+              ),
+              ListTile(
+                title: Text(loc.english,
+                    style: const TextStyle(color: Colors.white)),
+                onTap: () {
+                  ref.read(languageProvider.notifier).setLocale('en');
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(loc.savedToast)),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final profileAsync = ref.watch(profileProvider);
+    final loc = AppLocalizations.of(context)!;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -189,7 +245,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.white,
-        title: const Text('Mi Perfil', style: TextStyle(color: Colors.white)),
+        leading: IconButton(
+          icon: const Icon(Icons.language),
+          onPressed: () => _showLanguagePicker(context, ref, loc),
+        ),
+        title: Text(loc.profile, style: const TextStyle(color: Colors.white)),
         actions: [
           IconButton(
             icon: const Icon(Icons.visibility_rounded, size: 20),
@@ -757,6 +817,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   Widget _buildVerificationCard(BuildContext context, UserProfile profile) {
     final status = profile.verificationStatus ?? 'none';
+    final loc = AppLocalizations.of(context)!;
 
     Color statusColor;
     String statusText;
@@ -766,17 +827,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     switch (status) {
       case 'approved':
         statusColor = CelestyaColors.auroraTeal;
-        statusText = 'Cuenta Verificada';
+        statusText = loc.verified;
         statusIcon = Icons.verified_rounded;
         break;
       case 'pending_review': // Nuevo estado centralizado
         statusColor = CelestyaColors.starlightGold;
-        statusText = 'En revisión celestial';
+        statusText = loc.pendingReview;
         statusIcon = Icons.hourglass_top_rounded;
         break;
       case 'pending_upload': // Nuevo estado centralizado
         statusColor = CelestyaColors.celestialBlue;
-        statusText = 'Verificación incompleta';
+        statusText = loc.pendingUpload;
         statusIcon = Icons.add_a_photo_rounded;
         action = TextButton(
           onPressed: () => Navigator.of(context).push(
@@ -789,15 +850,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         break;
       case 'rejected':
         statusColor = Colors.redAccent;
-        statusText = 'Verificación rechazada';
+        statusText = loc.rejected;
         statusIcon = Icons.error_outline_rounded;
         action = TextButton(
           onPressed: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const VerifyProfileScreen()),
           ),
-          child: const Text('Reintentar',
-              style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          child: Text(loc.retry,
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold)),
         );
         break;
       default:
