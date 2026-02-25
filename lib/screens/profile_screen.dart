@@ -96,23 +96,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   Future<void> _confirmLogout(BuildContext context) async {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('¿Cerrar sesión?'),
-        content: const Text(
-            'Tendrás que ingresar tus credenciales nuevamente para entrar.'),
+        title: Text(loc.logoutConfirmTitle),
+        content: Text(loc.logoutConfirmDesc),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(loc.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(
               foregroundColor: theme.colorScheme.error,
             ),
-            child: const Text('Cerrar sesión'),
+            child: Text(loc.logout),
           ),
         ],
       ),
@@ -131,24 +131,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   Future<void> _confirmDeleteAccount(BuildContext context) async {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('¿Eliminar cuenta?'),
-        content: const Text(
-          'Esta acción es irreversible. Se eliminarán todos tus datos, matches y fotos de nuestros servidores.',
-        ),
+        title: Text(loc.deleteAccountTitle),
+        content: Text(loc.deleteAccountDesc),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(loc.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(
               foregroundColor: theme.colorScheme.error,
             ),
-            child: const Text('ELIMINAR MI CUENTA'),
+            child: Text(loc.deleteAccountBtn),
           ),
         ],
       ),
@@ -159,8 +158,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         await ApiClient.deleteMyAccount();
         await ref.read(authProvider.notifier).logout();
         if (context.mounted) {
+          final loc = AppLocalizations.of(context)!;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cuenta eliminada correctamente')),
+            SnackBar(content: Text(loc.deleteAccountSuccess)),
           );
           Navigator.of(context).pushNamedAndRemoveUntil(
             '/auth_gate',
@@ -169,9 +169,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         }
       } catch (e) {
         if (context.mounted) {
+          final loc = AppLocalizations.of(context)!;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error al eliminar cuenta: ${e.toString()}'),
+              content: Text('${loc.deleteAccountError}: ${e.toString()}'),
               backgroundColor: Colors.red,
             ),
           );
@@ -300,7 +301,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         size: 48, color: Colors.redAccent),
                     const SizedBox(height: 16),
                     Text(
-                      'Error al cargar perfil',
+                      loc.errorLoadingProfile,
                       style: theme.textTheme.titleMedium
                           ?.copyWith(color: Colors.white),
                     ),
@@ -314,7 +315,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () => ref.refresh(profileProvider),
-                      child: const Text('Reintentar'),
+                      child: Text(loc.retry),
                     ),
                   ],
                 ),
@@ -386,7 +387,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                           child: OutlinedButton.icon(
                             onPressed: () => _confirmLogout(context),
                             icon: const Icon(Icons.logout),
-                            label: const Text('Cerrar sesión'),
+                            label: Text(loc.logout),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFFFFE4E1),
                               side: BorderSide(
@@ -403,7 +404,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         TextButton.icon(
                           onPressed: () => _confirmDeleteAccount(context),
                           icon: const Icon(Icons.delete_forever, size: 20),
-                          label: const Text('Eliminar mi cuenta'),
+                          label: Text(loc.deleteAccount),
                           style: TextButton.styleFrom(
                             foregroundColor: Colors.white.withOpacity(0.5),
                           ),
@@ -425,8 +426,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   Widget _buildProfileHeader(
       BuildContext context, UserProfile profile, bool hasProfile) {
+    final loc = AppLocalizations.of(context)!;
     final displayName =
-        hasProfile ? formatDisplayName(profile) : 'Completa tu perfil';
+        hasProfile ? formatDisplayName(profile) : loc.completeYourProfile;
 
     final initials = (hasProfile && displayName.isNotEmpty)
         ? displayName.substring(0, 1).toUpperCase()
@@ -500,12 +502,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.edit, size: 14, color: Colors.white),
-                    SizedBox(width: 4),
+                  children: [
+                    const Icon(Icons.edit, size: 14, color: Colors.white),
+                    const SizedBox(width: 4),
                     Text(
-                      "Editar",
-                      style: TextStyle(
+                      loc.edit,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -548,14 +550,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   border: Border.all(
                       color: CelestyaColors.auroraTeal.withOpacity(0.5)),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.verified_user_rounded,
+                    const Icon(Icons.verified_user_rounded,
                         size: 14, color: CelestyaColors.auroraTeal),
-                    SizedBox(width: 4),
+                    const SizedBox(width: 4),
                     Text(
-                      'Confiable',
-                      style: TextStyle(
+                      loc.trusted,
+                      style: const TextStyle(
                         color: CelestyaColors.auroraTeal,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
@@ -589,6 +591,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   Widget _buildCompletionIndicator(BuildContext context, UserProfile profile) {
+    final loc = AppLocalizations.of(context)!;
     final percentage = profile.completionPercentage;
 
     return Container(
@@ -609,7 +612,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Tu progreso',
+                      loc.yourProgress,
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.9),
                         fontWeight: FontWeight.bold,
@@ -618,7 +621,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Un perfil completo atrae conexiones más profundas',
+                      loc.completeProfileHint,
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.5),
                         fontSize: 12,
@@ -662,6 +665,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   Widget _buildCompatibilitySection(BuildContext context) {
     final quizStatusAsync = ref.watch(quizStatusProvider);
     final quizCompleted = quizStatusAsync.value ?? false;
+    final loc = AppLocalizations.of(context)!;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -674,13 +678,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Icon(Icons.auto_awesome,
+            children: [
+              const Icon(Icons.auto_awesome,
                   color: CelestyaColors.starlightGold, size: 20),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
-                'Cuestionario de compatibilidad',
-                style: TextStyle(
+                loc.compatQuiz,
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -690,9 +694,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           ),
           const SizedBox(height: 12),
           Text(
-            quizCompleted
-                ? '¡Ya completaste tu cuestionario! Tus respuestas nos ayudan a encontrar mejores conexiones.'
-                : 'Aún no has contestado tu cuestionario. Te haremos 12 preguntas para conocer mejor tus preferencias.',
+            quizCompleted ? loc.quizCompletedDesc : loc.quizPendingDesc,
             style:
                 TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13),
           ),
@@ -727,9 +729,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: Text(
-                quizCompleted
-                    ? 'Cuestionario completado'
-                    : 'Responder cuestionario',
+                quizCompleted ? loc.quizCompletedBtn : loc.takeQuizBtn,
                 style:
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
@@ -742,6 +742,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   Widget _buildEmptyState(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context)!;
 
     return Card(
       child: Padding(
@@ -755,14 +756,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'Completa tu perfil',
+              loc.completeYourProfile,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Agrega tu información personal, detalles LDS, y fotos para comenzar a conectar con personas afines.',
+              loc.emptyProfileDesc,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withOpacity(0.7),
@@ -775,7 +776,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 _openEditProfile(context, profile);
               },
               icon: const Icon(Icons.edit),
-              label: const Text('Editar perfil'),
+              label: Text(loc.editProfileBtn),
             ),
           ],
         ),
@@ -843,9 +844,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           onPressed: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const VerifyProfileScreen()),
           ),
-          child: const Text('Continuar',
-              style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          child: Text(loc.continueBtn,
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold)),
         );
         break;
       case 'rejected':
@@ -863,15 +864,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         break;
       default:
         statusColor = Colors.white54;
-        statusText = 'Sin verificar';
+        statusText = loc.unverified;
         statusIcon = Icons.no_accounts_rounded;
         action = TextButton(
           onPressed: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const VerifyProfileScreen()),
           ),
-          child: const Text('Verificar ahora',
-              style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          child: Text(loc.verifyNow,
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold)),
         );
     }
 
@@ -905,7 +906,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         status == 'pending_upload'
                             ? (profile.activeInstruction ??
                                 'Sube tu selfie para completar')
-                            : 'Obtén tu sello de confianza',
+                            : loc.getTrustedSeal,
                         style: const TextStyle(
                             color: Colors.white54, fontSize: 12),
                       ),
@@ -928,6 +929,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   Widget _buildPhotoGallery(BuildContext context, UserProfile profile) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context)!;
     final photoKeys = profile.galleryPhotoKeys;
     final photoUrls = profile.photoUrls;
 
@@ -946,7 +948,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 Icon(Icons.photo_library, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'Mis fotos',
+                  loc.myPhotos,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -1008,6 +1010,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   Widget _buildLDSInfoCard(BuildContext context, UserProfile profile) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context)!;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1019,7 +1022,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 Icon(Icons.church, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'Información LDS',
+                  loc.ldsInfo,
                   style: theme.textTheme.titleMedium
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
@@ -1027,11 +1030,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             ),
             const SizedBox(height: 16),
             if (profile.stakeWard != null)
-              _buildInlineInfoRow(context, Icons.location_city, 'Estaca/Barrio',
+              _buildInlineInfoRow(context, Icons.location_city, loc.stakeWard,
                   profile.stakeWard!),
             if (profile.missionServed != null) ...[
               const SizedBox(height: 12),
-              _buildInlineInfoRow(context, Icons.flight_takeoff, 'Misión',
+              _buildInlineInfoRow(context, Icons.flight_takeoff, loc.mission,
                   profile.missionServed!),
             ],
           ],
@@ -1063,13 +1066,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   Widget _buildAboutMeSection(BuildContext context, UserProfile profile) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context)!;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Sobre mí',
+            Text(loc.aboutMe,
                 style: theme.textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
@@ -1081,13 +1085,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   Widget _buildDetailsSection(BuildContext context, UserProfile profile) {
+    final loc = AppLocalizations.of(context)!;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Detalles',
+            Text(loc.details,
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
@@ -1095,21 +1100,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             const SizedBox(height: 16),
             if (profile.heightCm != null)
               _buildInfoRow(
-                  context, Icons.height, 'Altura', profile.heightDisplay),
+                  context, Icons.height, loc.height, profile.heightDisplay),
             if (profile.maritalStatus != null) ...[
               const SizedBox(height: 12),
-              _buildInfoRow(context, Icons.favorite, 'Estado Civil',
+              _buildInfoRow(context, Icons.favorite, loc.maritalStatus,
                   profile.maritalStatus!.displayName),
             ],
             if (profile.education != null) ...[
               const SizedBox(height: 12),
               _buildInfoRow(
-                  context, Icons.school, 'Educación', profile.education!),
+                  context, Icons.school, loc.education, profile.education!),
             ],
             if (profile.occupation != null) ...[
               const SizedBox(height: 12),
               _buildInfoRow(
-                  context, Icons.work, 'Ocupación', profile.occupation!),
+                  context, Icons.work, loc.occupation, profile.occupation!),
             ],
           ],
         ),
@@ -1119,13 +1124,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   Widget _buildInterestsSection(BuildContext context, UserProfile profile) {
     final theme = Theme.of(context);
+    final loc = AppLocalizations.of(context)!;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Intereses',
+            Text(loc.interests,
                 style: theme.textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),

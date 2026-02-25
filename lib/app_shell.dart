@@ -7,6 +7,7 @@ import 'screens/inbox_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/admin_review_screen.dart'; // New
 import 'features/chats/chats_provider.dart';
+import 'l10n/app_localizations.dart';
 
 import 'widgets/profile_gate.dart';
 import 'providers/navigation_provider.dart';
@@ -41,6 +42,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 
     // Watch navigation index
     final currentIndex = ref.watch(navIndexProvider);
+    final loc = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: _pages[currentIndex],
@@ -61,17 +63,19 @@ class _AppShellState extends ConsumerState<AppShell> {
           type: BottomNavigationBarType.fixed,
           onTap: _handleAdminTap,
           items: [
-            const BottomNavigationBarItem(
-              icon:
-                  NeonNavIcon(icon: Icons.explore_outlined, isSelected: false),
-              activeIcon: NeonNavIcon(icon: Icons.explore, isSelected: true),
-              label: 'Descubrir',
+            BottomNavigationBarItem(
+              icon: const NeonNavIcon(
+                  icon: Icons.explore_outlined, isSelected: false),
+              activeIcon:
+                  const NeonNavIcon(icon: Icons.explore, isSelected: true),
+              label: loc.tabDiscover,
             ),
-            const BottomNavigationBarItem(
-              icon:
-                  NeonNavIcon(icon: Icons.favorite_outline, isSelected: false),
-              activeIcon: NeonNavIcon(icon: Icons.favorite, isSelected: true),
-              label: 'Matches',
+            BottomNavigationBarItem(
+              icon: const NeonNavIcon(
+                  icon: Icons.favorite_outline, isSelected: false),
+              activeIcon:
+                  const NeonNavIcon(icon: Icons.favorite, isSelected: true),
+              label: loc.tabMatches,
             ),
             BottomNavigationBarItem(
               icon: _BadgeIcon(
@@ -82,12 +86,14 @@ class _AppShellState extends ConsumerState<AppShell> {
                   icon: Icons.chat_bubble,
                   count: unreadCount,
                   isSelected: true),
-              label: 'Chats',
+              label: loc.tabChats,
             ),
-            const BottomNavigationBarItem(
-              icon: NeonNavIcon(icon: Icons.person_outline, isSelected: false),
-              activeIcon: NeonNavIcon(icon: Icons.person, isSelected: true),
-              label: 'Perfil',
+            BottomNavigationBarItem(
+              icon: const NeonNavIcon(
+                  icon: Icons.person_outline, isSelected: false),
+              activeIcon:
+                  const NeonNavIcon(icon: Icons.person, isSelected: true),
+              label: loc.tabProfile,
             ),
           ],
         ),

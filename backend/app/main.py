@@ -21,6 +21,7 @@ from slowapi.errors import RateLimitExceeded
 from .limiter import limiter
 from .middleware import SecurityHeadersMiddleware
 from .config import validate_config
+from .jobs.backup_scheduler import setup_scheduler
 
 # ✅ Base del proyecto (carpeta donde está /app)
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -180,8 +181,12 @@ def create_app() -> FastAPI:
         # Iniciar el job de limpieza en segundo plano
         asyncio.create_task(daily_cleanup_job())
         
+        
         # Validar configuración
         validate_config()
+
+        # Configurar y arrancar el scheduler de backups
+        app.state.scheduler = setup_scheduler(app)
 
     # ✅ Security Headers
     app.add_middleware(SecurityHeadersMiddleware)
@@ -308,6 +313,14 @@ def create_app() -> FastAPI:
     # ✅ Static files (local / media persistente)
     MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
     app.mount("/media", StaticFiles(directory=str(MEDIA_ROOT)), name="media")
+
+    @app.on_event("shutdown")
+    async def shutdown_event():
+        logger.info("app_shutdown_start")
+        if hasattr(app.state, "scheduler"):
+            logger.info("scheduler_shutdown_start")
+            app.state.scheduler.shutdown()
+            logger.info("scheduler_shutdown_complete")
 
     return app
 
