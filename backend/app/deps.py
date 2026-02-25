@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from .database import get_db
 from . import models
 from .security import decode_token, utcnow
-from datetime import timedelta, timezone
+import datetime
 # ...
 import structlog
 
@@ -24,22 +24,30 @@ def get_current_user(
     if not token or not token.strip():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing token",
+            detail={"detail": "Missing token", "code": "INVALID_TOKEN"},
             headers={"WWW-Authenticate": "Bearer"},
         )
 
     try:
         user_id = decode_token(token.strip())
-    except HTTPException as e:
-        # ✅ Respeta el mensaje real del decoder (Invalid token / expired / missing sub etc)
-        logger.warning("auth_token_decode_http_error", detail=e.detail, token_preview=(token[:12] + "...") if token else "empty")
-        raise e
     except Exception as e:
+        error_msg = str(e)
+        error_type = type(e).__name__
+        
+        # ✅ Handle ExpiredSignatureError specifically for clearer frontend response
+        if "expired" in error_msg.lower() or error_type == "ExpiredSignatureError":
+            logger.warning("auth_token_expired", error=error_msg)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"detail": "token_expired", "code": "ACCESS_EXPIRED"},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         # ✅ Cualquier otra cosa inesperada
-        logger.error("auth_token_invalid_unexpected", error=str(e), error_type=type(e).__name__, token_preview=(token[:12] + "...") if token else "empty")
+        logger.error("auth_token_invalid_unexpected", error=error_msg, error_type=error_type, token_preview=(token[:12] + "...") if token else "empty")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
+            detail={"detail": "invalid_token", "code": "INVALID_TOKEN"},
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -56,14 +64,12 @@ def get_current_user(
     
     last_seen_aware = user.last_seen
     if last_seen_aware and last_seen_aware.tzinfo is None:
-        last_seen_aware = last_seen_aware.replace(tzinfo=timezone.utc)
+        last_seen_aware = last_seen_aware.replace(tzinfo=datetime.timezone.utc)
 
-    if not user.last_seen or (now - last_seen_aware > timedelta(minutes=2)):
+    if not user.last_seen or (now - last_seen_aware > datetime.timedelta(minutes=2)):
         user.last_seen = now
         db.add(user)
         db.commit()
-        db.refresh(user)
-
         db.refresh(user)
 
     structlog.contextvars.bind_contextvars(user_id=user.id)

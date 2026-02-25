@@ -248,8 +248,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   SnackbarHelper.showSuccess(context, 'Usuario bloqueado');
                 }
               } catch (e) {
-                if (context.mounted)
+                if (context.mounted) {
                   SnackbarHelper.showError(context, 'Error al bloquear');
+                }
               }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -338,9 +339,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               context, 'Reporte enviado');
                         }
                       } catch (e) {
-                        if (context.mounted)
+                        if (context.mounted) {
                           SnackbarHelper.showError(
                               context, 'Error al reportar');
+                        }
                       }
                     },
               child: const Text('REPORTAR'),

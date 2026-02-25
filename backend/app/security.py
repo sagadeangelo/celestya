@@ -12,8 +12,12 @@ from jose import jwt, JWTError
 # ============================
 JWT_SECRET = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY") or ""
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))  # Reduced to 60m
-REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))  # 30 days
+ACCESS_TOKEN_TTL_MINUTES = int(os.getenv("ACCESS_TOKEN_TTL_MINUTES", "60"))
+REFRESH_TOKEN_TTL_DAYS = int(os.getenv("REFRESH_TOKEN_TTL_DAYS", "30"))
+
+# Mantener alias anteriores por compatibilidad interna si se prefiere
+ACCESS_TOKEN_EXPIRE_MINUTES = ACCESS_TOKEN_TTL_MINUTES
+REFRESH_TOKEN_EXPIRE_DAYS = REFRESH_TOKEN_TTL_DAYS
 
 if not JWT_SECRET:
     raise RuntimeError("JWT secret missing: set JWT_SECRET (or SECRET_KEY) in environment.")
@@ -72,8 +76,18 @@ def make_token() -> str:
     return secrets.token_urlsafe(32)
 
 
+import hmac
+
 def hash_token(token: str) -> str:
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+    """
+    Hashea el token usando HMAC-SHA256 con JWT_SECRET.
+    Esto evita que un leak de la DB permita generar tokens válidos offline.
+    """
+    return hmac.new(
+        JWT_SECRET.encode("utf-8"),
+        token.encode("utf-8"),
+        hashlib.sha256
+    ).hexdigest()
 
 
 def create_refresh_token() -> str:

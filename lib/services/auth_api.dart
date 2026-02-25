@@ -1,21 +1,19 @@
-import 'package:http/http.dart' as http;
 import 'api_client.dart';
-import 'dart:convert';
 
 class AuthApi {
   /// Realiza login y retorna el objeto Token completo {"access_token": "...", "token_type": "bearer"}
-  static Future<Map<String, dynamic>> loginFull(
-      String email, String password) async {
-    final res = await http.post(
-      Uri.parse('${ApiClient.API_BASE}/auth/login'),
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: {'username': email, 'password': password},
-    );
+  static Future<Map<String, dynamic>> loginFull(String email, String password,
+      {String? deviceId}) async {
+    // Note: OAuth2 typically uses form-urlencoded but our backend supports JSON login too
+    final payload = {
+      'username': email,
+      'password': password,
+      if (deviceId != null) 'device_id': deviceId
+    };
 
-    if (res.statusCode >= 200 && res.statusCode < 300) {
-      return jsonDecode(res.body);
-    }
-    throw Exception('Login fallido (${res.statusCode}): ${res.body}');
+    final res =
+        await ApiClient.postJson('/auth/login', payload, withAuth: false);
+    return res as Map<String, dynamic>;
   }
 
   /// Mantiene compatibilidad con el método viejo
@@ -92,6 +90,18 @@ class AuthApi {
     await ApiClient.postJson(
       '/auth/reset-password',
       {'token': token, 'new_password': newPassword},
+      withAuth: false,
+    );
+  }
+
+  static Future<Map<String, dynamic>> refreshToken(String refreshToken,
+      {String? deviceId}) async {
+    return await ApiClient.postJson(
+      '/auth/refresh',
+      {
+        'refresh_token': refreshToken,
+        if (deviceId != null) 'device_id': deviceId
+      },
       withAuth: false,
     );
   }

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/user_profile.dart';
 import '../features/profile/presentation/providers/profile_provider.dart';
-import '../theme/app_theme.dart';
 import '../providers/navigation_provider.dart';
+import '../theme/app_theme.dart';
 
 class ProfileGate extends ConsumerWidget {
   final Widget child;
@@ -44,18 +44,18 @@ class _IncompleteProfileView extends ConsumerWidget {
     if (profile.location == null || profile.location!.isEmpty) {
       missing.add('Ciudad de residencia');
     }
+    if (profile.profilePhotoUrl == null || profile.profilePhotoUrl!.isEmpty) {
+      missing.add('Foto de perfil');
+    }
+    if (profile.name == null || profile.name!.isEmpty) missing.add('Tu nombre');
+    if (profile.gender == null) missing.add('Género');
+    if (profile.birthdate == null) missing.add('Fecha de nacimiento');
 
-    final hasPhoto = (profile.profilePhotoKey != null &&
-            profile.profilePhotoKey!.isNotEmpty) ||
-        (profile.profilePhotoUrl != null &&
-            profile.profilePhotoUrl!.isNotEmpty);
-    if (!hasPhoto) missing.add('Foto de perfil');
-
-    if (profile.name == null || profile.name!.isEmpty)
-      missing.add('Tu nombre completo');
-    if (profile.gender == null) missing.add('Tu género');
-    if ((profile.age ?? profile.ageFromBirthdate) == null)
-      missing.add('Tu fecha de nacimiento (Edad)');
+    // Opcional: Podríamos pedir verificación aquí si el usuario lo desea
+    if (profile.verificationStatus == 'none' ||
+        profile.verificationStatus == null) {
+      missing.add('Verificación de Identidad (Sel selfie)');
+    }
 
     return Scaffold(
       backgroundColor: CelestyaColors.deepNight,
@@ -105,7 +105,7 @@ class _IncompleteProfileView extends ConsumerWidget {
             const Spacer(),
             ElevatedButton(
               onPressed: () {
-                // Switch to Profile Tab (Index 3)
+                // Switch to Profile Tab (Index 3 in AppShell)
                 ref.read(navIndexProvider.notifier).state = 3;
               },
               style: ElevatedButton.styleFrom(
@@ -116,7 +116,7 @@ class _IncompleteProfileView extends ConsumerWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30)),
               ),
-              child: const Text('Ir a mi Perfil',
+              child: const Text('Crear Perfil',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 24),

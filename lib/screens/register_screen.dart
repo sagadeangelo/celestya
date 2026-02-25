@@ -51,13 +51,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final Uri url = Uri.parse(urlString);
     try {
       if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-        if (mounted)
+        if (mounted) {
           SnackbarHelper.showError(
               context, 'No se pudo abrir el enlace: $urlString');
+        }
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         SnackbarHelper.showError(context, 'Error al intentar abrir el enlace');
+      }
     }
   }
 
@@ -166,8 +168,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     ),
                     textCapitalization: TextCapitalization.words,
                     validator: (v) {
-                      if (v == null || v.trim().length < 2)
+                      if (v == null || v.trim().length < 2) {
                         return 'Min 2 letras';
+                      }
                       return null;
                     },
                   ),
@@ -181,8 +184,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     ),
                     textCapitalization: TextCapitalization.words,
                     validator: (v) {
-                      if (v == null || v.trim().length < 2)
+                      if (v == null || v.trim().length < 2) {
                         return 'Min 2 letras';
+                      }
                       return null;
                     },
                   ),
@@ -205,8 +209,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   labelText: 'Correo electrónico *',
                   prefixIcon: Icon(Icons.email_outlined)),
               validator: (v) {
-                if (v == null || v.trim().isEmpty)
+                if (v == null || v.trim().isEmpty) {
                   return 'El correo es requerido';
+                }
                 if (!v.contains('@')) return 'Correo inválido';
                 return null;
               },
@@ -221,8 +226,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   prefixIcon: Icon(Icons.location_city_outlined),
                   helperText: 'Donde vives actualmente'),
               validator: (v) {
-                if (v == null || v.trim().isEmpty)
+                if (v == null || v.trim().isEmpty) {
                   return 'La ciudad es requerida';
+                }
                 return null;
               },
             ),
@@ -237,38 +243,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
             const SizedBox(height: 16),
 
-            FormField<DateTime>(
-              validator: (val) {
-                if (_selectedBirthdateRaw == null)
+            TextFormField(
+              controller: _birthdateCtrl,
+              readOnly: true,
+              decoration: const InputDecoration(
+                  labelText: 'Fecha de nacimiento *',
+                  prefixIcon: Icon(Icons.cake_outlined),
+                  helperText: 'Debes ser mayor de 18 años',
+                  suffixIcon: Icon(Icons.calendar_today)),
+              onTap: _selectBirthdate,
+              validator: (v) {
+                if (v == null || v.isEmpty) {
                   return 'La fecha de nacimiento es requerida';
+                }
                 return null;
-              },
-              builder: (state) {
-                return InkWell(
-                  onTap: () async {
-                    await _selectBirthdate();
-                    state.didChange(_selectedBirthdateRaw);
-                  },
-                  child: InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: 'Fecha de nacimiento (Tocar para elegir) *',
-                      prefixIcon: const Icon(Icons.cake_outlined),
-                      helperText: 'Debes ser mayor de 18 años',
-                      suffixIcon: const Icon(Icons.calendar_today),
-                      errorText: state.errorText,
-                      border: const OutlineInputBorder(),
-                    ),
-                    child: Text(
-                      _birthdateCtrl.text.isEmpty
-                          ? 'Seleccionar fecha'
-                          : _birthdateCtrl.text,
-                      style: TextStyle(
-                          color: _birthdateCtrl.text.isEmpty
-                              ? theme.colorScheme.onSurface.withOpacity(0.6)
-                              : theme.colorScheme.onSurface),
-                    ),
-                  ),
-                );
               },
             ),
             const SizedBox(height: 16),

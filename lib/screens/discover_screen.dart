@@ -437,13 +437,32 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            '${candidate.name}${candidate.age != null ? ", ${candidate.age}" : ""}',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 32,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                          Row(
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  '${candidate.name}${candidate.age != null ? ", ${candidate.age}" : ""}',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 32,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              if (candidate
+                                                      .verificationStatus ==
+                                                  'approved') ...[
+                                                const SizedBox(width: 8),
+                                                const Icon(
+                                                    Icons.verified_rounded,
+                                                    color: CelestyaColors
+                                                        .auroraTeal,
+                                                    size: 28),
+                                              ],
+                                            ],
                                           ),
                                           if (candidate.city.isNotEmpty)
                                             Padding(

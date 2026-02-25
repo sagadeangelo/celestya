@@ -25,22 +25,29 @@ class _PremiumMatchCardState extends State<PremiumMatchCard> {
 
   List<String> get _photos {
     final photos = <String>[];
+
+    // 1. Add main photo if exists (prefer already resolved photoUrl)
     if (widget.candidate.photoUrl != null &&
         widget.candidate.photoUrl!.isNotEmpty) {
       photos.add(widget.candidate.photoUrl!);
-    }
-    // Si ya tenemos photoUrl, esa es la versión firmada de la photoKey principal.
-    // Solo agregar photoKey si photoUrl está vacía y queremos que _RemoteImage la resuelva.
-    if (widget.candidate.photoKey != null &&
-        (widget.candidate.photoUrl == null ||
-            widget.candidate.photoUrl!.isEmpty)) {
+    } else if (widget.candidate.photoKey != null &&
+        widget.candidate.photoKey!.isNotEmpty) {
       photos.add(widget.candidate.photoKey!);
     }
-    photos.addAll(widget.candidate.photoUrls);
-    return photos
-        .toSet()
-        .where((p) => p.isNotEmpty)
-        .toList(); // Evitar duplicados y vacíos
+
+    // 2. Add other gallery photos, avoiding duplicates of the main photo
+    for (final url in widget.candidate.photoUrls) {
+      if (!photos.contains(url)) {
+        photos.add(url);
+      }
+    }
+
+    // 3. Last fallback: if we only have a key and list was empty
+    if (photos.isEmpty && widget.candidate.photoKey != null) {
+      photos.add(widget.candidate.photoKey!);
+    }
+
+    return photos.toSet().toList(); // Final safety check for uniqueness
   }
 
   @override
@@ -306,27 +313,31 @@ class _RemoteImageState extends State<_RemoteImage> {
   Future<void> _fetch() async {
     try {
       final res = await ApiClient.getJson('/media/url?key=${widget.photoKey}');
-      if (mounted)
+      if (mounted) {
         setState(() {
           _url = res['url'];
           _loading = false;
         });
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _loading = false;
         });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading)
+    if (_loading) {
       return const Center(
           child: CircularProgressIndicator(color: Colors.white));
-    if (_url == null)
+    }
+    if (_url == null) {
       return Container(
           color: Colors.grey.shade300, child: const Icon(Icons.error));
+    }
     return Image.network(
       '$_url&t=${DateTime.now().millisecondsSinceEpoch}',
       fit: BoxFit.cover,

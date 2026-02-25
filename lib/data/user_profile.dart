@@ -192,12 +192,21 @@ class UserProfile {
   final String? occupation;
   final List<String> interests;
 
-  // Photos
-  final String? profilePhotoUrl; // legacy local
-  final String? profilePhotoKey; // R2 key
+  // Foto principal (Legacy / Cache)
+  final String? profilePhotoUrl;
+  final List<String> photoUrls;
+
+  // Foto R2
+  final String? profilePhotoKey;
   final List<String> galleryPhotoKeys;
-  final List<String> photoUrls; // signed urls (read-only)
+
   final String? voiceIntroPath;
+
+  // Verification
+  final String? verificationStatus;
+  final String? rejectionReason;
+  final String? activeInstruction;
+  final int? verificationAttempt;
 
   const UserProfile({
     this.name,
@@ -228,6 +237,10 @@ class UserProfile {
     this.birthdate,
     this.profilePhotoKey,
     this.galleryPhotoKeys = const [],
+    this.verificationStatus,
+    this.rejectionReason,
+    this.activeInstruction,
+    this.verificationAttempt,
   });
 
   factory UserProfile.empty() => const UserProfile();
@@ -269,6 +282,8 @@ class UserProfile {
 
   bool get isReadyForMatching {
     if (!_hasValue(location)) return false;
+    // Si quieres que la verificación sea obligatoria para matches, descomenta la siguiente línea:
+    // if (verificationStatus == 'none' || verificationStatus == 'rejected') return false;
     return isValid;
   }
 
@@ -466,6 +481,13 @@ class UserProfile {
               ?.map((e) => e as String)
               .toList() ??
           const [],
+      verificationStatus:
+          json['verification_status'] ?? json['verificationStatus'],
+      rejectionReason: json['rejection_reason'] ?? json['rejectionReason'],
+      activeInstruction:
+          json['active_instruction'] ?? json['activeInstruction'],
+      verificationAttempt:
+          json['verification_attempt'] ?? json['verificationAttempt'],
     );
   }
 
@@ -498,6 +520,10 @@ class UserProfile {
     List<String>? photoUrls,
     String? voiceIntroPath,
     bool? emailVerified,
+    String? verificationStatus,
+    String? rejectionReason,
+    String? activeInstruction,
+    int? verificationAttempt,
   }) {
     return UserProfile(
       name: name ?? this.name,
@@ -528,6 +554,10 @@ class UserProfile {
       photoUrls: photoUrls ?? this.photoUrls,
       voiceIntroPath: voiceIntroPath ?? this.voiceIntroPath,
       emailVerified: emailVerified ?? this.emailVerified,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
+      rejectionReason: rejectionReason ?? this.rejectionReason,
+      activeInstruction: activeInstruction ?? this.activeInstruction,
+      verificationAttempt: verificationAttempt ?? this.verificationAttempt,
     );
   }
 

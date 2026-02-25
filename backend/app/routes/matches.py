@@ -1,5 +1,8 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi.responses import JSONResponse
 from starlette import status
+from typing import List
+
 import os
 import math
 from datetime import date, datetime
@@ -11,8 +14,10 @@ from ..deps import get_current_user
 from .. import models
 from .users import user_to_out
 import logging
+import structlog
 
-logger = logging.getLogger("api")
+logger = structlog.get_logger("api")
+
 
 router = APIRouter()
 
@@ -205,7 +210,7 @@ def suggested(
         except:
             return 999999.0
 
-    candidates = []
+    candidates: List[models.User] = []
     for cand in candidates_raw:
         # LOGGING FOR DEBUG
         debug_reason = "kept"
@@ -239,14 +244,15 @@ def suggested(
             # However, if SQL let it through (e.g. because birthdate was NULL), this block won't run (cand.birthdate is None).
             # If birthdate is NOT None, we must respect the age limits if set.
             
-            if min_age is not None and cand_age is not None and cand_age < min_age:
+            if min_age is not None and cand_age is not None and int(cand_age) < int(min_age):
                 debug_reason = f"age {cand_age} < min {min_age}"
-                logger.info(f"[DEBUG] Dropping user {cand.id}: {debug_reason}")
+                logger.info("suggested_drop", user_id=cand.id, reason=debug_reason)
                 continue
-            if max_age is not None and cand_age is not None and cand_age > max_age:
+            if max_age is not None and cand_age is not None and int(cand_age) > int(max_age):
                 debug_reason = f"age {cand_age} > max {max_age}"
-                logger.info(f"[DEBUG] Dropping user {cand.id}: {debug_reason}")
+                logger.info("suggested_drop", user_id=cand.id, reason=debug_reason)
                 continue
+
                 
         if debug_reason == "kept":
              logger.info(f"[DEBUG] Keeping user {cand.id} ({cand.name})")
@@ -492,34 +498,80 @@ def unmatch_user(
     return {"ok": True}
 
 
-@router.delete("/reset")
-def reset_matches(
+@router.post("/reset")
+def reset_account(
     db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(get_current_user)
 ):
     """
-    Resets ALL matches, likes, passes, and conversations for the current user.
-    Effectively "restarts" the discovery process.
+    Prompt 3: Reinicia historial completo del usuario sin borrar la cuenta.
+    Borra en orden: messages -> chats -> matches/likes/passes -> tokens -> compat.
     """
-    # 1. Delete Matches (where A or B is user)
-    db.query(models.Match).filter(
-        or_(models.Match.user_a_id == user.id, models.Match.user_b_id == user.id)
-    ).delete(synchronize_session=False)
+    user_id = current_user.id
+    logger.info("reset_started", user_id=user_id)
 
-    # 2. Delete conversations (where A or B is user)
-    db.query(models.Conversation).filter(
-        or_(models.Conversation.user_a_id == user.id, models.Conversation.user_b_id == user.id)
-    ).delete(synchronize_session=False)
-
-    # 3. Delete Likes SENT by user (so they can like again)
-    db.query(models.Like).filter(models.Like.liker_id == user.id).delete(synchronize_session=False)
     
-    # 4. Delete Passes SENT by user (so they can see passed people again)
-    db.query(models.Pass).filter(models.Pass.passer_id == user.id).delete(synchronize_session=False)
-
-    db.commit()
-    logger.info(f"[RESET] User {user.id} reset their matching history.")
-    return {"ok": True, "message": "History reset"}
-
-    db.commit()
-    return {"ok": True}
+    try:
+        # 1. Borrar Mensajes de sus chats
+        conv_ids_q = db.query(models.Conversation.id).filter(
+            (models.Conversation.user_a_id == user_id) | 
+            (models.Conversation.user_b_id == user_id)
+        )
+        conv_ids = [r[0] for r in conv_ids_q.all()]
+        
+        msg_count = db.query(models.Message).filter(models.Message.conversation_id.in_(conv_ids)).delete(synchronize_session=False) if conv_ids else 0
+        
+        # 2. Borrar Conversaciones
+        chat_count = db.query(models.Conversation).filter(
+            (models.Conversation.user_a_id == user_id) | 
+            (models.Conversation.user_b_id == user_id)
+        ).delete(synchronize_session=False)
+        
+        # 3. Borrar Matches
+        match_count = db.query(models.Match).filter(
+            (models.Match.user_a_id == user_id) | 
+            (models.Match.user_b_id == user_id)
+        ).delete(synchronize_session=False)
+        
+        # 4. Borrar Likes (enviados y recibidos)
+        like_count = db.query(models.Like).filter(
+            (models.Like.liker_id == user_id) | 
+            (models.Like.liked_id == user_id)
+        ).delete(synchronize_session=False)
+        
+        # 5. Borrar Passes (enviados y recibidos)
+        pass_count = db.query(models.Pass).filter(
+            (models.Pass.passer_id == user_id) | 
+            (models.Pass.passed_id == user_id)
+        ).delete(synchronize_session=False)
+        
+        # 6. Borrar Refresh Tokens para forzar re-login o limpiar sesión
+        token_count = db.query(models.RefreshToken).filter(models.RefreshToken.user_id == user_id).delete(synchronize_session=False)
+        
+        # 7. Opcional: Borrar respuestas del Quiz/Compat para que vuelva a hacerlo
+        compat_count = db.query(models.UserCompat).filter(models.UserCompat.user_id == user_id).delete(synchronize_session=False)
+        
+        db.commit()
+        
+        logger.info("reset_finished", user_id=user_id, deleted={"msgs": msg_count, "chats": chat_count, "matches": match_count})
+        
+        return {
+            "ok": True, 
+            "message": "Historial reiniciado correctamente",
+            "deleted": {
+                "messages": msg_count,
+                "chats": chat_count,
+                "matches": match_count,
+                "likes": like_count,
+                "passes": pass_count
+            }
+        }
+        
+    except Exception as e:
+        db.rollback()
+        import traceback
+        logger.error("reset_failed", user_id=user_id, error=str(e), traceback=traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Error en reinicio: {str(e)}", "code": "RESET_FAILED"}
+        )

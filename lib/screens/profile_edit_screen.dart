@@ -803,7 +803,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: DropdownButtonFormField<Gender>(
-                    value: _selectedGender,
+                    initialValue: _selectedGender,
                     decoration: const InputDecoration(
                       labelText: 'Género',
                       border: OutlineInputBorder(),
@@ -922,8 +922,9 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                     : null,
               ),
               validator: (v) {
-                if (v == null || v.trim().isEmpty)
+                if (v == null || v.trim().isEmpty) {
                   return 'La ubicación es requerida';
+                }
                 return null;
               },
             ),

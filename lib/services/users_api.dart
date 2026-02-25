@@ -103,6 +103,51 @@ class UsersApi {
     }
   }
 
+  // ----------------------------
+  // Identity Verification
+  // ----------------------------
+
+  /// Inicia una solicitud de verificación. Retorna {verificationId, instruction, status, attempt}
+  static Future<Map<String, dynamic>> requestVerification() async {
+    return await ApiClient.postJson('/verification/request', {},
+        withAuth: true);
+  }
+
+  /// Sube la imagen para una solicitud específica.
+  static Future<void> uploadVerificationImage(
+      int verificationId, File image) async {
+    final token = await AuthService.getToken();
+    final req = http.MultipartRequest(
+        'POST', Uri.parse('${ApiClient.API_BASE}/verification/upload'));
+
+    if (token != null) {
+      req.headers['Authorization'] = 'Bearer $token';
+    }
+
+    // El backend espera verification_id como Form o field
+    req.fields['verification_id'] = verificationId.toString();
+
+    req.files.add(await http.MultipartFile.fromPath(
+      'file',
+      image.path,
+      filename: 'verification.jpg',
+      contentType: MediaType('image', 'jpeg'),
+    ));
+
+    final res = await req.send();
+    final body = await res.stream.bytesToString();
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception(
+          'Error al subir imagen de verificación (${res.statusCode}): $body');
+    }
+  }
+
+  /// Obtiene el estado actual de la última verificación (incluyendo instrucción/razón)
+  static Future<Map<String, dynamic>> getMyVerificationStatus() async {
+    return await ApiClient.getJson('/verification/me', withAuth: true);
+  }
+
   static Future<void> updateProfile(UserProfile profile) async {
     final payload = profile.toJson();
     // profile.toJson() already includes name and birthdate (YYYY-MM-DD string)

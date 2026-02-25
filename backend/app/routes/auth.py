@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from ..database import get_db
+from ..deps import get_current_user
 from .. import models, schemas
 from ..limiter import limiter, LIMIT_AUTH
 from ..security import (
@@ -18,8 +19,8 @@ from ..security import (
     hash_token,
     decode_token,
     make_token,
-    ACCESS_TOKEN_EXPIRE_MINUTES,
-    REFRESH_TOKEN_EXPIRE_DAYS,
+    ACCESS_TOKEN_TTL_MINUTES,
+    REFRESH_TOKEN_TTL_DAYS,
     utcnow,
 )
 from ..enums import AgeBucket
@@ -109,6 +110,51 @@ def _to_utc_aware(dt: datetime) -> datetime:
     return dt.astimezone(timezone.utc)
 
 
+def _prune_refresh_tokens(db: Session, user_id: int):
+    """
+    ✅ Prompt 6: Seguridad mínima
+    - Limita refresh tokens activos por user a 10 (por created_at desc).
+    - Borra tokens expirados y revocados antiguos (> 30 días).
+    """
+    try:
+        now = utcnow()
+        # 1. Borrar tokens expirados o revocados hace más de 30 días
+        thirty_days_ago = now - timedelta(days=30)
+        db.query(models.RefreshToken).filter(
+            models.RefreshToken.user_id == user_id,
+            (
+                (models.RefreshToken.expires_at < thirty_days_ago) |
+                (models.RefreshToken.revoked_at < thirty_days_ago)
+            )
+        ).delete(synchronize_session=False)
+
+        # 2. Limitar a los 10 más recientes activos
+        active_tokens = (
+            db.query(models.RefreshToken.id)
+            .filter(
+                models.RefreshToken.user_id == user_id,
+                models.RefreshToken.revoked_at == None,
+                models.RefreshToken.expires_at > now
+            )
+            .order_by(models.RefreshToken.created_at.desc())
+            .all()
+        )
+
+        if len(active_tokens) > 10:
+            ids_to_keep = [t.id for t in active_tokens[:10]]
+            db.query(models.RefreshToken).filter(
+                models.RefreshToken.user_id == user_id,
+                models.RefreshToken.revoked_at == None,
+                models.RefreshToken.expires_at > now,
+                ~models.RefreshToken.id.in_(ids_to_keep)
+            ).update({models.RefreshToken.revoked_at: now}, synchronize_session=False)
+        
+        db.commit()
+    except Exception as e:
+        logger.error("auth_prune_error", error=str(e), user_id=user_id)
+        db.rollback()
+
+
 def _safe_send_verification_email(to_email: str, code: str, link_token: str, subject: str) -> bool:
     """
     Envía el correo de verificación SIN romper el flujo si falla.
@@ -149,10 +195,13 @@ def register(
     existing_user = db.query(models.User).filter(models.User.email == email).first()
     
     if existing_user:
-        # Si ya está verificado, responder con éxito pero no hacer nada (Blind Response)
+        # Si ya está verificado, arrojar error 409 Conflict con mensaje claro
         if existing_user.email_verified:
             logger.info("auth_register_duplicate_verified", email=email)
-            return {"status": "pending_verification", "email": email}
+            raise HTTPException(
+                status_code=409, 
+                detail="Este correo ya se ha registrado anteriormente."
+            )
         
         # Si NO está verificado, actualizar datos (Smart Re-registration)
         user = existing_user
@@ -415,7 +464,7 @@ def verify_email(
         db_refresh = models.RefreshToken(
             user_id=user.id,
             token_hash=hash_token(refresh_token),
-            expires_at=utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+            expires_at=utcnow() + timedelta(days=REFRESH_TOKEN_TTL_DAYS)
         )
         db.add(db_refresh)
         db.commit()
@@ -443,11 +492,16 @@ def verify_email(
     access_token = create_access_token(sub=user.id)
     refresh_token = create_refresh_token()
     
+    # Track device/agent info
+    user_agent = request.headers.get("User-Agent")
+    
     # Save Refresh Token
     db_refresh = models.RefreshToken(
         user_id=user.id,
         token_hash=hash_token(refresh_token),
-        expires_at=utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+        expires_at=utcnow() + timedelta(days=REFRESH_TOKEN_TTL_DAYS),
+        user_agent=user_agent,
+        last_used_at=utcnow()
     )
     db.add(db_refresh)
     db.commit()
@@ -455,7 +509,8 @@ def verify_email(
     return {
         "access_token": access_token, 
         "token_type": "bearer",
-        "refresh_token": refresh_token
+        "refresh_token": refresh_token,
+        "expires_in": ACCESS_TOKEN_TTL_MINUTES * 60
     }
 
 
@@ -474,39 +529,90 @@ def refresh_token(
     )
 
     if not db_refresh:
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
+        raise HTTPException(
+            status_code=401, 
+            detail={"detail": "invalid_refresh", "code": "INVALID_REFRESH"}
+        )
 
-    # Check if revoked or expired
+    # 1. Validaciones de Revocación y Reuso (Prompt 3)
     if db_refresh.revoked_at:
-        raise HTTPException(status_code=401, detail="Token revoked")
-    
-    # Check expiration
-    now = _to_utc_aware(utcnow())
-    # db_refresh.expires_at might be offset-naive or aware depending on DB
-    # Safer to ensure both are aware
-    exp = _to_utc_aware(db_refresh.expires_at)
-    
-    if now > exp:
-        raise HTTPException(status_code=401, detail="Token expired")
+        if db_refresh.replaced_by_token_hash:
+             logger.warning("auth_refresh_reused_detected", 
+                            token_prefix=payload.refresh_token[:8], 
+                            user_id=db_refresh.user_id)
+             raise HTTPException(
+                status_code=401, 
+                detail={"detail": "refresh_reused", "code": "REFRESH_REUSED"}
+             )
 
-    # ROTATION: Revoke old, issue new
-    db_refresh.revoked_at = now
+        raise HTTPException(
+            status_code=401, 
+            detail={"detail": "refresh_revoked", "code": "REFRESH_REVOKED"}
+        )
     
-    new_access_token = create_access_token(sub=db_refresh.user_id)
-    new_refresh_token = create_refresh_token()
-    
-    new_db_refresh = models.RefreshToken(
-        user_id=db_refresh.user_id,
-        token_hash=hash_token(new_refresh_token),
-        expires_at=utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    )
-    db.add(new_db_refresh)
-    db.commit()
+    # 2. Validación de Expiración
+    now = utcnow()
+    exp = _to_utc_aware(db_refresh.expires_at)
+    if now > exp:
+        raise HTTPException(
+            status_code=401, 
+            detail={"detail": "refresh_expired", "code": "REFRESH_EXPIRED"}
+        )
+
+    # 3. Rotación en Transacción (Prompt 3)
+    try:
+        # Re-fetch en transacción si fuera necesario, pero aquí usamos db_refresh directamente
+        # Marcar viejo como revocado
+        db_refresh.revoked_at = now
+        db_refresh.last_used_at = now
+        
+        # Generar nuevo con reintento si hay colisión de hash (extremadamente raro)
+        new_refresh_token = None
+        new_hash = None
+        for _ in range(3):
+            try:
+                new_refresh_token = create_refresh_token()
+                new_hash = hash_token(new_refresh_token)
+                
+                new_db_refresh = models.RefreshToken(
+                    user_id=db_refresh.user_id,
+                    token_hash=new_hash,
+                    expires_at=now + timedelta(days=REFRESH_TOKEN_TTL_DAYS),
+                    device_id=payload.device_id or db_refresh.device_id,
+                    user_agent=request.headers.get("User-Agent") or db_refresh.user_agent,
+                    last_used_at=now,
+                    created_at=now
+                )
+                db.add(new_db_refresh)
+                db.flush() # Verificar uniqueness
+                
+                # Link rotation
+                db_refresh.replaced_by_token_hash = new_hash
+                break
+            except Exception:
+                db.rollback()
+                continue
+        else:
+            raise HTTPException(status_code=500, detail="Could not generate unique token")
+
+        new_access_token = create_access_token(sub=db_refresh.user_id)
+        db.commit()
+
+        # 4. Prune opcional (Background o inline)
+        _prune_refresh_tokens(db, db_refresh.user_id)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error("auth_refresh_transaction_failed", error=str(e))
+        raise HTTPException(status_code=500, detail="Transaction failed")
 
     return {
         "access_token": new_access_token,
+        "refresh_token": new_refresh_token,
         "token_type": "bearer",
-        "refresh_token": new_refresh_token
+        "expires_in": ACCESS_TOKEN_TTL_MINUTES * 60
     }
 
 
@@ -517,6 +623,9 @@ def logout(
     payload: schemas.RefreshTokenIn,
     db: Session = Depends(get_db)
 ):
+    """
+    ✅ Prompt 4: Logout / revoke (Idempotente)
+    """
     token_hash = hash_token(payload.refresh_token)
     db_refresh = (
         db.query(models.RefreshToken)
@@ -525,10 +634,29 @@ def logout(
     )
     
     if db_refresh:
-        db_refresh.revoked_at = _to_utc_aware(utcnow())
+        db_refresh.revoked_at = utcnow()
         db.commit()
+        logger.info("auth_logout_revoked", user_id=db_refresh.user_id)
     
-    return {"message": "Logged out successfully"}
+    return {"ok": True}
+
+
+@router.post("/logout-all", status_code=204)
+@limiter.limit(LIMIT_AUTH)
+def logout_all(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """
+    Revoca TODOS los refresh tokens del usuario.
+    """
+    db.query(models.RefreshToken).filter(
+        models.RefreshToken.user_id == current_user.id
+    ).update({"revoked_at": utcnow()}, synchronize_session=False)
+    
+    db.commit()
+    return None
 
 
 @router.post("/resend-verification", response_model=schemas.VerifyEmailOut)
@@ -545,6 +673,7 @@ def resend_verification(
     - Usa respuestas "ciegas" para seguridad.
     """
     email = payload.email.lower().strip()
+    logger.info("auth_resend_verification_start", email=email)
 
     user = db.query(models.User).filter(models.User.email == email).first()
 
@@ -576,6 +705,7 @@ def resend_verification(
         "Verificación de cuenta - Celestya",
     )
 
+    logger.info("auth_resend_verification_success", email=user.email)
     return {"ok": True, "message": "Si el correo existe, te enviamos los datos de verificación."}
 
 
@@ -627,15 +757,47 @@ def consume_verify_link(payload: dict, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=schemas.Token)
 @limiter.limit(LIMIT_AUTH)
-def login(
+async def login(
     request: Request,
-    username: str = Form(...),
-    password: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    email = username.lower().strip()
+    """
+    Soporta login vía JSON (BaseModel) o Form (OAuth2 legacy).
+    Esto soluciona el error 422 si el cliente envía un formato inesperado.
+    """
+    username = None
+    password = None
+    device_id = None
 
+    # 1. Intentar capturar JSON
+    try:
+        body = await request.json()
+        logger.info("auth_login_json", keys=list(body.keys()) if body else None)
+        username = body.get("username")
+        password = body.get("password")
+        device_id = body.get("device_id")
+    except:
+        # 2. Fallback a Form data
+        try:
+            form_data = await request.form()
+            logger.info("auth_login_form", keys=list(form_data.keys()) if form_data else None)
+            username = form_data.get("username")
+            password = form_data.get("password")
+            device_id = form_data.get("device_id")
+        except:
+            logger.warning("auth_login_no_body")
+            pass
+
+    if not username or not password:
+        logger.warning("auth_login_missing_fields", has_username=bool(username))
+        raise HTTPException(
+            status_code=422, 
+            detail="Se requiere username y password. Asegúrate de enviar un JSON válido."
+        )
+
+    email = username.lower().strip()
     user = db.query(models.User).filter(models.User.email == email).first()
+    
     if (not user) or (not verify_password(password, user.password_hash)):
         raise HTTPException(status_code=400, detail="Credenciales inválidas")
 
@@ -645,19 +807,30 @@ def login(
     access_token = create_access_token(user.id)
     refresh_token = create_refresh_token()
     
+    # Track device/agent info
+    device_id = device_id or request.headers.get("X-Device-Id")
+    user_agent = request.headers.get("User-Agent")
+    
+    now = utcnow()
+
     # Save Refresh Token
     db_refresh = models.RefreshToken(
         user_id=user.id,
         token_hash=hash_token(refresh_token),
-        expires_at=utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+        created_at=now,
+        expires_at=now + timedelta(days=REFRESH_TOKEN_TTL_DAYS),
+        device_id=device_id,
+        user_agent=user_agent,
+        last_used_at=now
     )
     db.add(db_refresh)
     db.commit()
 
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
-        "refresh_token": refresh_token
+        "expires_in": ACCESS_TOKEN_TTL_MINUTES * 60
     }
 
 
@@ -702,8 +875,12 @@ def forgot_password(
             background_tasks.add_task(send_reset_password_email, user.email, token, current_base_url)
         else:
             print(f"[AUTH] Forgot password: Email {email} not found")
+            raise HTTPException(
+                status_code=404, 
+                detail="Este correo no está registrado en Celestya."
+            )
 
-        return {"message": "Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña."}
+        return {"message": "Recibirás instrucciones para restablecer tu contraseña en tu correo."}
     except Exception as e:
         import traceback
         error_msg = traceback.format_exc()

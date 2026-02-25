@@ -133,8 +133,9 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                 }
               },
               validator: (v) {
-                if (v == null || v.length != 6)
+                if (v == null || v.length != 6) {
                   return "El código debe ser de 6 dígitos";
+                }
                 if (int.tryParse(v) == null) return "Solo números";
                 return null;
               },

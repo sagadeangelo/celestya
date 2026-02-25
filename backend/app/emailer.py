@@ -22,8 +22,8 @@ VERIFIED_DOMAIN = "lasagadeangelo.com.mx"
 DEFAULT_FROM = f"Celestya <no-reply@{VERIFIED_DOMAIN}>"
 MAIL_FROM = os.getenv("MAIL_FROM", "").strip() or DEFAULT_FROM
 
-# Validación de seguridad: el dominio debe ser el verificado
-if VERIFIED_DOMAIN not in MAIL_FROM:
+# Validación de seguridad: el dominio debe ser el verificado, pero permitimos onboarding de Resend
+if VERIFIED_DOMAIN not in MAIL_FROM and "resend.dev" not in MAIL_FROM:
     logger.error("mail_from_invalid_domain", mail_from=MAIL_FROM, expected_domain=VERIFIED_DOMAIN)
     MAIL_FROM = DEFAULT_FROM
 

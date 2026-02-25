@@ -8,6 +8,8 @@ import '../widgets/empty_state.dart';
 import '../widgets/starry_background.dart';
 import '../theme/app_theme.dart';
 import '../services/matches_api.dart';
+import '../features/chats/chats_provider.dart';
+import '../features/profile/presentation/providers/profile_provider.dart';
 import 'match_detail_screen.dart';
 
 /// Provider: carga MATCHES CONFIRMADOS desde backend
@@ -82,7 +84,7 @@ class MatchesScreen extends ConsumerWidget {
                         alignment: Alignment.bottomCenter,
                         child: Padding(
                           padding: const EdgeInsets.all(20.0),
-                          child: _ResetButton(ref: ref),
+                          child: const _ResetButton(),
                         ),
                       ),
                     ],
@@ -112,7 +114,7 @@ class MatchesScreen extends ConsumerWidget {
                     const SizedBox(height: 10),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                      child: _ResetButton(ref: ref),
+                      child: const _ResetButton(),
                     ),
                   ],
                 );
@@ -125,9 +127,15 @@ class MatchesScreen extends ConsumerWidget {
   }
 }
 
-class _ResetButton extends StatelessWidget {
-  final WidgetRef ref;
-  const _ResetButton({required this.ref});
+class _ResetButton extends ConsumerStatefulWidget {
+  const _ResetButton({super.key});
+
+  @override
+  ConsumerState<_ResetButton> createState() => _ResetButtonState();
+}
+
+class _ResetButtonState extends ConsumerState<_ResetButton> {
+  bool _isLoading = false;
 
   Future<void> _confirmReset(BuildContext context) async {
     final confirm = await showDialog<bool>(
@@ -154,34 +162,72 @@ class _ResetButton extends StatelessWidget {
     );
 
     if (confirm == true) {
-      final success = await MatchesApi.resetMatches();
-      if (success) {
-        ref.refresh(confirmedMatchesProvider);
-        // Force refresh discovery feed to show users again
-        ref.read(discoverProvider.notifier).loadCandidates(forceRefresh: true);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al reiniciar matches')),
-        );
+      if (!mounted) return;
+      setState(() => _isLoading = true);
+
+      try {
+        final success = await MatchesApi.resetMatches();
+        if (success) {
+          // Prompt 5: Comprehensive state cleanup
+          ref.invalidate(confirmedMatchesProvider);
+          ref.invalidate(chatsListProvider);
+          ref.invalidate(matchesListProvider);
+          ref.invalidate(profileProvider);
+          ref.invalidate(quizStatusProvider);
+
+          // Force refresh discovery feed to show users again
+          ref
+              .read(discoverProvider.notifier)
+              .loadCandidates(forceRefresh: true);
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Matches reiniciados con éxito'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No se pudo completar el reinicio')),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(
+                    'Error: ${e.toString().replaceAll('Exception: ', '')}')),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return TextButton.icon(
-      onPressed: () => _confirmReset(context),
-      icon: Icon(Icons.delete_forever, color: Colors.white.withOpacity(0.7)),
-      label: Text(
-        'Borrar todo y empezar de nuevo',
-        style: TextStyle(color: Colors.white.withOpacity(0.7)),
-      ),
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        backgroundColor: Colors.black26,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      ),
-    );
+    return _isLoading
+        ? const CircularProgressIndicator(color: Colors.white70)
+        : TextButton.icon(
+            onPressed: () => _confirmReset(context),
+            icon: Icon(Icons.delete_forever,
+                color: Colors.white.withOpacity(0.7)),
+            label: Text(
+              'Borrar todo y empezar de nuevo',
+              style: TextStyle(color: Colors.white.withOpacity(0.7)),
+            ),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              backgroundColor: Colors.black26,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+            ),
+          );
   }
 }
 

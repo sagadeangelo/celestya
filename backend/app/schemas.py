@@ -29,6 +29,11 @@ class UserCreate(BaseModel):
     # IMPORTANTE: si tu backend ya concatena first/last, aquí puede quedarse como name (opcional)
     name: Optional[str] = None
 
+class LoginIn(BaseModel):
+    username: str
+    password: str
+    device_id: Optional[str] = Field(None, alias="device_id")
+
 
 class RegisterResponse(BaseModel):
     status: str = "pending_verification"
@@ -39,10 +44,12 @@ class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     refresh_token: Optional[str] = None
+    expires_in: Optional[int] = None
 
 
 class RefreshTokenIn(BaseModel):
     refresh_token: str
+    device_id: Optional[str] = None
 
 
 # ----------------------------
@@ -122,6 +129,11 @@ class UserOut(BaseModel):
     mission_years: Optional[str] = Field(None, alias="missionYears")
     favorite_calling: Optional[str] = Field(None, alias="favoriteCalling")
     favorite_scripture: Optional[str] = Field(None, alias="favoriteScripture")
+    
+    # Nuevo: Estado de verificación
+    verification_status: str = Field("none", alias="verificationStatus")
+    rejection_reason: Optional[str] = Field(None, alias="rejectionReason")
+    active_instruction: Optional[str] = Field(None, alias="activeInstruction")
 
 
 class PhotoOut(BaseModel):
@@ -235,3 +247,37 @@ class MessageCreate(BaseModel):
 class MarkReadIn(BaseModel):
     # Opcional: hasta qué mensaje leer. Si es null, lee todo.
     until_message_id: Optional[int] = None
+
+
+# ----------------------------
+# Identity Verification
+# ----------------------------
+class VerificationRequestOut(BaseModel):
+    verification_id: int = Field(..., alias="verificationId")
+    instruction: str
+    status: str
+    attempt: int
+
+class VerificationMeOut(BaseModel):
+    status: str
+    instruction: Optional[str] = None
+    rejection_reason: Optional[str] = Field(None, alias="rejectionReason")
+    attempt: Optional[int] = None
+
+class AdminVerificationOut(BaseModel):
+    id: int
+    user_id: int = Field(..., alias="userId")
+    user_email: str = Field(..., alias="userEmail")
+    user_name: Optional[str] = Field(None, alias="userName")
+    instruction: str
+    status: str
+    attempt: int
+    created_at: datetime = Field(..., alias="createdAt")
+    image_signed_url: Optional[str] = Field(None, alias="imageSignedUrl")
+
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+
+class AdminRejectIn(BaseModel):
+    reason: str

@@ -10,8 +10,10 @@ from sqlalchemy import (
     ForeignKey,
     func,
     UniqueConstraint,
+    Index,
 )
 from sqlalchemy.orm import relationship, backref
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.types import JSON  # ✅ para guardar respuestas como dict/list
 
 from .database import Base
@@ -94,6 +96,22 @@ class User(Base):
         uselist=False,
     )
 
+    @hybrid_property
+    def verification_status(self) -> str:
+        """
+        Calcula el estado de verificación basado en la solicitud más reciente.
+        'none' | 'pending_upload' | 'pending_review' | 'approved' | 'rejected'
+        """
+        if not self.verifications:
+            return "none"
+        
+        # Obtener la más reciente por ID
+        latest = sorted(self.verifications, key=lambda v: v.id, reverse=True)[0]
+        return latest.status
+
+    # Relación con verifications
+    verifications = relationship("UserVerification", back_populates="user", cascade="all, delete-orphan")
+
 
 class UserCompat(Base):
     __tablename__ = "user_compat"
@@ -169,7 +187,7 @@ class Message(Base):
     __tablename__ = "messages"
 
     id = Column(Integer, primary_key=True, index=True)
-    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True)
     sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     body = Column(String(1000), nullable=False)  # Max 1000 chars
@@ -255,10 +273,45 @@ class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    token_hash = Column(String(255), nullable=False, index=True)
-    expires_at = Column(DateTime(timezone=True), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_hash = Column(String(255), nullable=False, index=True, unique=True)
+    
+    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    revoked_at = Column(DateTime(timezone=True), nullable=True)
+    revoked_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    
+    # ✅ Rotation: if this token was exchanged for a new one
+    replaced_by_token_hash = Column(String(255), nullable=True)
+    
+    # ✅ Tracking
+    device_id = Column(String(255), nullable=True, index=True)
+    user_agent = Column(String(500), nullable=True)
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
 
     user = relationship("User", backref=backref("refresh_tokens", cascade="all, delete-orphan"))
+
+
+class UserVerification(Base):
+    __tablename__ = "user_verifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    instruction = Column(String, nullable=False)
+    image_key = Column(String, nullable=True)  # Key en R2
+    
+    status = Column(String(50), default="pending_upload", nullable=False)  # pending_upload, pending_review, approved, rejected
+    rejection_reason = Column(String, nullable=True)
+    attempt = Column(Integer, default=1, nullable=False)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User", back_populates="verifications")
+
+    # Índices optimizados
+    __table_args__ = (
+        Index("idx_verification_user_status", "user_id", "status"),
+        Index("idx_verification_user_created", "user_id", "created_at"),
+    )

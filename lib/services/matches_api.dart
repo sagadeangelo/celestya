@@ -180,6 +180,8 @@ class MatchesApi {
       latitude: (u['lat'] is num) ? (u['lat'] as num).toDouble() : null,
       longitude: (u['lon'] is num) ? (u['lon'] as num).toDouble() : null,
       gender: u['gender']?.toString(), // Parse gender
+      verificationStatus:
+          (u['verification_status'] ?? u['verificationStatus'])?.toString(),
     );
   }
 
@@ -253,7 +255,7 @@ class MatchesApi {
   /// POST /matches/unmatch/{userId}
   static Future<bool> unmatchUser(String userId) async {
     try {
-      final res = await ApiClient.postJson('matches/unmatch/$userId', {});
+      final res = await ApiClient.postJson('/matches/unmatch/$userId', {});
       return res is Map && res['ok'] == true;
     } catch (e) {
       debugPrint('[MatchesApi] Error unmatchUser: $e');
@@ -264,11 +266,12 @@ class MatchesApi {
   // Borrar todos los matches y reiniciar
   static Future<bool> resetMatches() async {
     try {
-      final response = await ApiClient.deleteJson('matches/reset');
+      // Prompt 1 & 4: Ensure it uses POST and correct path
+      final response = await ApiClient.postJson('/matches/reset', {});
       return response is Map && response['ok'] == true;
     } catch (e) {
       debugPrint('[MatchesApi] Reset matches failed: $e');
-      return false;
+      rethrow;
     }
   }
 }

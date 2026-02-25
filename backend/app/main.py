@@ -1,14 +1,14 @@
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import JSONResponse
 
-from .database import Base, engine, SessionLocal, get_db, ensure_user_columns, DATABASE_URL
-from .routes import auth, users, matches, safety, chats, debug, admin
+from .database import Base, engine, SessionLocal, get_db, DATABASE_URL
+from .routes import auth, users, matches, safety, chats, debug, admin, verification
 from . import models
 from .security import utcnow
 from datetime import timedelta
@@ -85,8 +85,7 @@ def create_app() -> FastAPI:
     if os.getenv("AUTO_CREATE_TABLES", "true").lower() == "true":
         Base.metadata.create_all(bind=engine)
 
-    # Migración manual segura (SQLite)
-    ensure_user_columns(engine)
+    # Migración runtime removida en favor de Alembic
 
     env = os.getenv("ENV", "production").lower()
     is_prod = env == "production"
@@ -118,6 +117,16 @@ def create_app() -> FastAPI:
             "db_type": db_type
         }
 
+    @app.get("/health")
+    def health_check():
+        return {
+            "ok": True, 
+            "service": "celestya-backend", 
+            "ts": utcnow().isoformat()
+        }
+
+
+
     @app.on_event("startup")
     async def startup_event():
         # Log DB identity and simple counts to verify correct DB file
@@ -139,7 +148,34 @@ def create_app() -> FastAPI:
             except Exception as e:
                 logger.error(f"[DB-STARTUP] Error running counts: {e}")
         except Exception as e:
-            logger.error(f"[DB-STARTUP] Error logging DATABASE_URL: {e}")
+            logger.error(f"[DB-STARTUP] Outer startup error: {e}")
+            
+        # Migración segura para SQLite (Runtime Fallback)
+        if str(DATABASE_URL).startswith("sqlite"):
+            try:
+                with SessionLocal() as db:
+                    # Columnas nuevas en UserVerification
+                    cols_needed = {
+                        "status": "VARCHAR(50) DEFAULT 'pending_upload'",
+                        "rejection_reason": "TEXT",
+                        "reviewed_at": "DATETIME"
+                    }
+                    
+                    # 1. Verificar cuáles faltan
+                    existing_cols_q = db.execute(text("PRAGMA table_info(user_verifications)"))
+                    existing_cols = [row[1] for row in existing_cols_q.fetchall()]
+                    
+                    for col, col_type in cols_needed.items():
+                        if col not in existing_cols:
+                            logger.info(f"[DB-MIGRATE] Adding missing column: user_verifications.{col}")
+                            db.execute(text(f"ALTER TABLE user_verifications ADD COLUMN {col} {col_type}"))
+                    
+                    # 2. Asegurar que 'status' tenga el valor correcto si era nullable antes
+                    # (SQLite ALTER TABLE ADD COLUMN con DEFAULT suele funcionar bien)
+                    
+                    db.commit()
+            except Exception as e:
+                logger.error(f"[DB-MIGRATE] Error in startup migration: {e}")
 
         # Iniciar el job de limpieza en segundo plano
         asyncio.create_task(daily_cleanup_job())
@@ -171,15 +207,29 @@ def create_app() -> FastAPI:
             response = await call_next(request)
             process_time = (time.time() - start_time) * 1000
 
-            # Log completion
-            logger.info(
-                "request_finished",
-                method=request.method,
-                path=request.url.path,
-                status=response.status_code,
-                latency=f"{process_time:.2f}ms"
+            # ✅ Selective logging for diagnostics
+            ua = request.headers.get("User-Agent", "")
+            x_client = request.headers.get("X-Client", "")
+            path = request.url.path
+
+            should_log = (
+                path != "/" or 
+                x_client == "mobile" or 
+                "Dart" in ua
             )
+
+            if should_log:
+                logger.info(
+                    "request_finished",
+                    method=request.method,
+                    path=path,
+                    status=response.status_code,
+                    latency=f"{process_time:.2f}ms",
+                    user_agent=ua,
+                    x_client=x_client
+                )
             return response
+
         except Exception as e:
             import traceback
             process_time = (time.time() - start_time) * 1000
@@ -195,7 +245,8 @@ def create_app() -> FastAPI:
             return JSONResponse(
                 status_code=500,
                 content={
-                    "detail": "Internal Server Error",
+                    "detail": "Internal server error",
+                    "code": "INTERNAL_ERROR",
                     "error_id": error_id,
                 },
             )
@@ -203,13 +254,33 @@ def create_app() -> FastAPI:
     # ✅ Handler de validación JSON
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
-        logger.error(f"Validation Error: {exc.errors()}")
+        logger.error("validation_error", errors=exc.errors())
         return JSONResponse(
             status_code=422,
             content={
-                "detail": "Error de validación en los datos enviados. Asegúrate de enviar un JSON válido.",
+                "detail": "Error de validación en los datos. Por favor verifica los campos.",
+                "code": "VALIDATION_ERROR",
                 "errors": exc.errors(),
             },
+        )
+    
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException):
+        """
+        ✅ Handler unificado de errores.
+        Si detail es un dict, lo devuelve directamente como body.
+        Esto permite { "detail": "...", "code": "..." } en el root del JSON.
+        """
+        if isinstance(exc.detail, dict):
+            return JSONResponse(
+                status_code=exc.status_code,
+                content=exc.detail,
+                headers=exc.headers
+            )
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+            headers=exc.headers
         )
 
     # ✅ Rutas API
@@ -217,6 +288,7 @@ def create_app() -> FastAPI:
     app.include_router(users.router, prefix="/users", tags=["users"])
     app.include_router(matches.router, prefix="/matches", tags=["matches"])
     app.include_router(chats.router, prefix="/chats", tags=["chats"])
+    app.include_router(verification.router, prefix="/verification", tags=["verification"])
 
     # ✅ Upload a R2
     app.include_router(upload_router, tags=["uploads"])

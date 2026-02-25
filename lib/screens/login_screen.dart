@@ -84,8 +84,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 prefixIcon: Icon(Icons.email_outlined),
               ),
               validator: (v) {
-                if (v == null || v.trim().isEmpty)
+                if (v == null || v.trim().isEmpty) {
                   return 'El correo es requerido';
+                }
                 if (!v.contains('@')) return 'Correo inválido';
                 return null;
               },

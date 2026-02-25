@@ -94,6 +94,9 @@ def user_to_out(user: models.User) -> dict:
         "mission_years": user.mission_years,
         "favorite_calling": user.favorite_calling,
         "favorite_scripture": user.favorite_scripture,
+        "verification_status": user.verification_status,
+        "rejection_reason": getattr(user.verifications[-1], "rejection_reason", None) if user.verifications and user.verification_status == "rejected" else None,
+        "active_instruction": getattr(user.verifications[-1], "instruction", None) if user.verifications and user.verification_status == "pending_upload" else None,
     }
 
 

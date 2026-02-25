@@ -7,8 +7,8 @@ import '../features/profile/presentation/providers/profile_provider.dart';
 import 'compat_quiz_screen.dart';
 import 'compat_summary_screen.dart';
 import 'profile_edit_screen.dart';
+import 'verify_profile_screen.dart';
 
-import '../services/auth_service.dart';
 import '../services/api_client.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
@@ -17,8 +17,34 @@ import '../widgets/voice_intro_widget.dart';
 import 'package:celestya/screens/image_viewer_screen.dart';
 import '../widgets/profile_image.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      debugPrint('[ProfileScreen] App resumed, refreshing...');
+      ref.read(profileProvider.notifier).loadProfile();
+    }
+  }
 
   /// Normaliza strings para evitar mostrar "null", "undefined", espacios, etc.
   String? _cleanString(String? v) {
@@ -35,7 +61,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Future<void> _openEditProfile(
-      BuildContext context, WidgetRef ref, UserProfile? profile) async {
+      BuildContext context, UserProfile? profile) async {
     final result = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) =>
@@ -48,7 +74,7 @@ class ProfileScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _openQuiz(BuildContext context, WidgetRef ref) async {
+  Future<void> _openQuiz(BuildContext context) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => const CompatQuizScreen(),
@@ -66,7 +92,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+  Future<void> _confirmLogout(BuildContext context) async {
     final theme = Theme.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -101,8 +127,7 @@ class ProfileScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _confirmDeleteAccount(
-      BuildContext context, WidgetRef ref) async {
+  Future<void> _confirmDeleteAccount(BuildContext context) async {
     final theme = Theme.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -154,7 +179,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final profileAsync = ref.watch(profileProvider);
 
@@ -228,8 +253,7 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: () =>
-                          ref.read(profileProvider.notifier).loadProfile(),
+                      onPressed: () => ref.refresh(profileProvider),
                       child: const Text('Reintentar'),
                     ),
                   ],
@@ -239,85 +263,94 @@ class ProfileScreen extends ConsumerWidget {
                 final cleanedName = _cleanString(profile.name);
                 final hasProfile = cleanedName != null;
 
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildProfileHeader(context, ref, profile, hasProfile),
-                      const SizedBox(height: 24),
-                      if (profile.photoUrls.isNotEmpty) ...[
-                        _buildPhotoGallery(context, profile),
+                return RefreshIndicator(
+                  onRefresh: () =>
+                      ref.read(profileProvider.notifier).loadProfile(),
+                  color: CelestyaColors.starlightGold,
+                  backgroundColor: CelestyaColors.mysticalPurple,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildProfileHeader(context, profile, hasProfile),
                         const SizedBox(height: 24),
-                      ],
-                      if (hasProfile) ...[
-                        _buildCompletionIndicator(context, profile),
+                        if (profile.photoUrls.isNotEmpty) ...[
+                          _buildPhotoGallery(context, profile),
+                          const SizedBox(height: 24),
+                        ],
+                        _buildVerificationCard(context, profile),
                         const SizedBox(height: 24),
-                      ],
-                      if (hasProfile) ...[
-                        VoiceIntroWidget(profile: profile, ref: ref),
+                        if (hasProfile) ...[
+                          _buildCompletionIndicator(context, profile),
+                          const SizedBox(height: 24),
+                        ],
+                        if (hasProfile) ...[
+                          VoiceIntroWidget(profile: profile, ref: ref),
+                          const SizedBox(height: 24),
+                        ],
+                        if (hasProfile) ...[
+                          _buildLDSInfoCard(context, profile),
+                          const SizedBox(height: 24),
+                        ],
+                        if (_cleanString(profile.bio) != null) ...[
+                          _buildAboutMeSection(context, profile),
+                          const SizedBox(height: 24),
+                        ],
+                        if (hasProfile) ...[
+                          _buildDetailsSection(context, profile),
+                          const SizedBox(height: 24),
+                        ],
+                        if (profile.interests.isNotEmpty) ...[
+                          _buildInterestsSection(context, profile),
+                          const SizedBox(height: 24),
+                        ],
+                        _buildCompatibilitySection(context),
                         const SizedBox(height: 24),
-                      ],
-                      if (hasProfile) ...[
-                        _buildLDSInfoCard(context, profile),
-                        const SizedBox(height: 24),
-                      ],
-                      if (_cleanString(profile.bio) != null) ...[
-                        _buildAboutMeSection(context, profile),
-                        const SizedBox(height: 24),
-                      ],
-                      if (hasProfile) ...[
-                        _buildDetailsSection(context, profile),
-                        const SizedBox(height: 24),
-                      ],
-                      if (profile.interests.isNotEmpty) ...[
-                        _buildInterestsSection(context, profile),
-                        const SizedBox(height: 24),
-                      ],
-                      _buildCompatibilitySection(context, ref),
-                      const SizedBox(height: 24),
-                      if (!hasProfile) ...[
-                        _buildEmptyState(context, ref),
-                      ],
-                      const SizedBox(height: 32),
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFFFE4E1).withOpacity(0.3),
-                              blurRadius: 15,
-                              spreadRadius: 1,
+                        if (!hasProfile) ...[
+                          _buildEmptyState(context),
+                        ],
+                        const SizedBox(height: 32),
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFFE4E1).withOpacity(0.3),
+                                blurRadius: 15,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                          child: OutlinedButton.icon(
+                            onPressed: () => _confirmLogout(context),
+                            icon: const Icon(Icons.logout),
+                            label: const Text('Cerrar sesión'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFFFE4E1),
+                              side: BorderSide(
+                                  color:
+                                      const Color(0xFFFFE4E1).withOpacity(0.8)),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30)),
                             ),
-                          ],
-                        ),
-                        child: OutlinedButton.icon(
-                          onPressed: () => _confirmLogout(context, ref),
-                          icon: const Icon(Icons.logout),
-                          label: const Text('Cerrar sesión'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFFFFE4E1),
-                            side: BorderSide(
-                                color:
-                                    const Color(0xFFFFE4E1).withOpacity(0.8)),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: Colors.transparent,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30)),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextButton.icon(
-                        onPressed: () => _confirmDeleteAccount(context, ref),
-                        icon: const Icon(Icons.delete_forever, size: 20),
-                        label: const Text('Eliminar mi cuenta'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white.withOpacity(0.5),
+                        const SizedBox(height: 16),
+                        TextButton.icon(
+                          onPressed: () => _confirmDeleteAccount(context),
+                          icon: const Icon(Icons.delete_forever, size: 20),
+                          label: const Text('Eliminar mi cuenta'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white.withOpacity(0.5),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
+                        const SizedBox(height: 24),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -330,8 +363,8 @@ class ProfileScreen extends ConsumerWidget {
 
   // --- Celestial Profile Components ---
 
-  Widget _buildProfileHeader(BuildContext context, WidgetRef ref,
-      UserProfile profile, bool hasProfile) {
+  Widget _buildProfileHeader(
+      BuildContext context, UserProfile profile, bool hasProfile) {
     final displayName =
         hasProfile ? formatDisplayName(profile) : 'Completa tu perfil';
 
@@ -343,7 +376,7 @@ class ProfileScreen extends ConsumerWidget {
       children: [
         GestureDetector(
           onTap: () {
-            _openEditProfile(context, ref, profile);
+            _openEditProfile(context, profile);
           },
           child: Stack(
             alignment: Alignment.bottomRight,
@@ -440,6 +473,11 @@ class ProfileScreen extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+            if (profile.verificationStatus == 'approved') ...[
+              const SizedBox(width: 6),
+              const Icon(Icons.verified_rounded,
+                  color: CelestyaColors.auroraTeal, size: 24),
+            ],
             const SizedBox(width: 8),
             if (hasProfile)
               Container(
@@ -561,7 +599,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCompatibilitySection(BuildContext context, WidgetRef ref) {
+  Widget _buildCompatibilitySection(BuildContext context) {
     final quizStatusAsync = ref.watch(quizStatusProvider);
     final quizCompleted = quizStatusAsync.value ?? false;
 
@@ -614,7 +652,7 @@ class ProfileScreen extends ConsumerWidget {
                     ],
             ),
             child: OutlinedButton(
-              onPressed: quizCompleted ? null : () => _openQuiz(context, ref),
+              onPressed: quizCompleted ? null : () => _openQuiz(context),
               style: OutlinedButton.styleFrom(
                 foregroundColor:
                     quizCompleted ? Colors.white38 : const Color(0xFFFFF8E7),
@@ -642,7 +680,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, WidgetRef ref) {
+  Widget _buildEmptyState(BuildContext context) {
     final theme = Theme.of(context);
 
     return Card(
@@ -674,7 +712,7 @@ class ProfileScreen extends ConsumerWidget {
             FilledButton.icon(
               onPressed: () {
                 final profile = ref.read(profileProvider).valueOrNull;
-                _openEditProfile(context, ref, profile);
+                _openEditProfile(context, profile);
               },
               icon: const Icon(Icons.edit),
               label: const Text('Editar perfil'),
@@ -714,6 +752,116 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildVerificationCard(BuildContext context, UserProfile profile) {
+    final status = profile.verificationStatus ?? 'none';
+
+    Color statusColor;
+    String statusText;
+    IconData statusIcon;
+    Widget? action;
+
+    switch (status) {
+      case 'approved':
+        statusColor = CelestyaColors.auroraTeal;
+        statusText = 'Cuenta Verificada';
+        statusIcon = Icons.verified_rounded;
+        break;
+      case 'pending_review': // Nuevo estado centralizado
+        statusColor = CelestyaColors.starlightGold;
+        statusText = 'En revisión celestial';
+        statusIcon = Icons.hourglass_top_rounded;
+        break;
+      case 'pending_upload': // Nuevo estado centralizado
+        statusColor = CelestyaColors.celestialBlue;
+        statusText = 'Verificación incompleta';
+        statusIcon = Icons.add_a_photo_rounded;
+        action = TextButton(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const VerifyProfileScreen()),
+          ),
+          child: const Text('Continuar',
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        );
+        break;
+      case 'rejected':
+        statusColor = Colors.redAccent;
+        statusText = 'Verificación rechazada';
+        statusIcon = Icons.error_outline_rounded;
+        action = TextButton(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const VerifyProfileScreen()),
+          ),
+          child: const Text('Reintentar',
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        );
+        break;
+      default:
+        statusColor = Colors.white54;
+        statusText = 'Sin verificar';
+        statusIcon = Icons.no_accounts_rounded;
+        action = TextButton(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const VerifyProfileScreen()),
+          ),
+          child: const Text('Verificar ahora',
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: CelestyaColors.deepNight,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: statusColor.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(statusIcon, color: statusColor, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      statusText,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    if (status == 'none' || status == 'pending_upload')
+                      Text(
+                        status == 'pending_upload'
+                            ? (profile.activeInstruction ??
+                                'Sube tu selfie para completar')
+                            : 'Obtén tu sello de confianza',
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12),
+                      ),
+                    if (status == 'rejected' && profile.rejectionReason != null)
+                      Text(
+                        profile.rejectionReason!,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12),
+                      ),
+                  ],
+                ),
+              ),
+              if (action != null) action,
+            ],
+          ),
+        ],
+      ),
     );
   }
 

@@ -5,7 +5,7 @@ import '../theme/app_theme.dart';
 import '../widgets/match_voice_player.dart';
 import '../services/api_client.dart';
 import '../services/chats_api.dart';
-import '../services/matches_api.dart'; // Added for Unmatch
+// Added for Unmatch
 import 'chat_screen.dart';
 import '../utils/snackbar_helper.dart';
 
@@ -494,8 +494,9 @@ class MatchDetailScreen extends StatelessWidget {
             context, "Debes hacer Match primero para enviar mensajes.");
       }
     } catch (e) {
-      if (context.mounted)
+      if (context.mounted) {
         SnackbarHelper.showError(context, "Error al iniciar chat");
+      }
     }
   }
 

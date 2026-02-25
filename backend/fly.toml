@@ -4,6 +4,9 @@ primary_region = "dfw"
 [build]
   dockerfile = "Dockerfile"
 
+[deploy]
+  
+
 [http_service]
   internal_port = 8080
   force_https = true
@@ -29,3 +32,6 @@ primary_region = "dfw"
 [vm]
   size = "shared-cpu-1x"
   memory = "1024mb"
+
+# NOTE: Since SQLite is used, ensure "fly scale count 1" is executed manually.
+# Horizontal scaling will break database persistence as it expects single-writer.

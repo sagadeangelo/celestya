@@ -5,6 +5,7 @@ import 'screens/discover_screen.dart';
 import 'screens/matches_screen.dart';
 import 'screens/inbox_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/admin_review_screen.dart'; // New
 import 'features/chats/chats_provider.dart';
 
 import 'widgets/profile_gate.dart';
@@ -24,6 +25,9 @@ class _AppShellState extends ConsumerState<AppShell> {
     InboxScreen(),
     ProfileScreen(),
   ];
+
+  int _adminTaps = 0;
+  DateTime? _lastTap;
 
   @override
   Widget build(BuildContext context) {
@@ -55,9 +59,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           selectedItemColor: Colors.white,
           unselectedItemColor: Colors.white54,
           type: BottomNavigationBarType.fixed,
-          onTap: (idx) {
-            ref.read(navIndexProvider.notifier).state = idx;
-          },
+          onTap: _handleAdminTap,
           items: [
             const BottomNavigationBarItem(
               icon:
@@ -91,6 +93,31 @@ class _AppShellState extends ConsumerState<AppShell> {
         ),
       ),
     );
+  }
+
+  void _handleAdminTap(int idx) {
+    if (idx == 3) {
+      final now = DateTime.now();
+      if (_lastTap == null ||
+          now.difference(_lastTap!) > const Duration(seconds: 2)) {
+        _adminTaps = 1;
+      } else {
+        _adminTaps++;
+      }
+      _lastTap = now;
+
+      if (_adminTaps >= 5) {
+        _adminTaps = 0;
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const AdminReviewScreen()),
+        );
+      }
+    } else {
+      _adminTaps = 0;
+    }
+
+    ref.read(navIndexProvider.notifier).state = idx;
   }
 }
 

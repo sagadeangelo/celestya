@@ -86,9 +86,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       final res = await AuthApi.loginFull(email, password);
-      final token = res['access_token'];
-      await AuthService.saveToken(token);
-      state = AuthState.loggedIn(token);
+      final access = res['access_token'];
+      final refresh = res['refresh_token'];
+      await AuthService.saveTokens(access: access, refresh: refresh);
+      state = AuthState.loggedIn(access);
     } catch (e) {
       state = AuthState.loggedOut(error: e.toString());
     }
@@ -119,9 +120,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
         state = AuthState.pendingVerification(email);
       } else if (res.containsKey('access_token')) {
         // Fallback: if backend returns token directly
-        final token = res['access_token'];
-        await AuthService.saveToken(token);
-        state = AuthState.loggedIn(token);
+        final access = res['access_token'];
+        final refresh = res['refresh_token'] ?? "";
+        await AuthService.saveTokens(access: access, refresh: refresh);
+        state = AuthState.loggedIn(access);
       }
     } catch (e) {
       state = AuthState.loggedOut(error: e.toString());
@@ -136,14 +138,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Backend returns directly the token dict: {"access_token": "...", ...}
       // It does NOT return "ok": true in this specific endpoint.
       if (res.containsKey('access_token')) {
-        final token = res['access_token'];
-        await AuthService.saveToken(token);
+        final access = res['access_token'];
+        final refresh = res['refresh_token'];
+        await AuthService.saveTokens(access: access, refresh: refresh);
 
         // Clear pending verification data
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove(_keyPendingEmail);
 
-        state = AuthState.loggedIn(token);
+        state = AuthState.loggedIn(access);
       } else {
         // Should not happen if ApiClient throws on error, but safekeeping
         state = state.copyWith(
@@ -171,14 +174,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Intercambiamos el link_token por un access_token real
       final res = await AuthApi.consumeVerifyLink(token);
       if (res['ok'] == true && res.containsKey('access_token')) {
-        final accessToken = res['access_token'];
-        await AuthService.saveToken(accessToken);
+        final access = res['access_token'];
+        final refresh = res['refresh_token'] ?? "";
+        await AuthService.saveTokens(access: access, refresh: refresh);
 
         // Limpiamos estado pendiente
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove(_keyPendingEmail);
 
-        state = AuthState.loggedIn(accessToken);
+        state = AuthState.loggedIn(access);
       } else {
         state = AuthState.loggedOut(error: "Enlace inválido o expirado");
       }
