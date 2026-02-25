@@ -1,0 +1,23 @@
+name: Daily DB Backup to R2
+
+on:
+  schedule:
+    # Corre todos los días a las 08:00 UTC
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+    # Permite ejecutarlo manualmente desde la pestaña "Actions"
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Execute Backup Script via SSH
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          # El flag -e hace que bash aborte si hay un error
+          # flyctl propaga el código de salida del comando interno
+          flyctl ssh console -a celestya-backend -C "sh -lc 'set -e; python /app/scripts/backup_db.py'"
