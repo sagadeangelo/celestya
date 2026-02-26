@@ -40,11 +40,13 @@ void main() async {
   Hive.registerAdapter(QuizAttemptAdapter());
   await Hive.openBox<QuizAttempt>('quiz_attempts');
 
-  // 2. Initialize Workmanager
-  await Workmanager().initialize(
-    callbackDispatcher,
-    isInDebugMode: kDebugMode, // Use flutter foundation to detect mode
-  );
+  // 2. Initialize Workmanager (Not supported on Web)
+  if (!kIsWeb) {
+    await Workmanager().initialize(
+      callbackDispatcher,
+      isInDebugMode: kDebugMode, // Use flutter foundation to detect mode
+    );
+  }
 
   // 3. Initialize Connectivity Listener
   ConnectivityService.init();
