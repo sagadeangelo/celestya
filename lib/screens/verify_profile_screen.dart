@@ -13,6 +13,7 @@ import '../services/users_api.dart';
 import '../features/profile/presentation/providers/profile_provider.dart';
 import '../widgets/starry_background.dart';
 import '../l10n/app_localizations.dart';
+import '../review/review_mode.dart';
 
 class VerifyProfileScreen extends ConsumerStatefulWidget {
   const VerifyProfileScreen({super.key});
@@ -55,6 +56,18 @@ class _VerifyProfileScreenState extends ConsumerState<VerifyProfileScreen>
   Future<void> _loadStatus({bool silent = false}) async {
     if (!silent) setState(() => _isInitializing = true);
     try {
+      final me = await UsersApi.me(); // Get current user
+      final email = me.email;
+
+      // KILL-SWITCH: Google Play Review Selfie Bypass
+      if (ReviewMode.isReviewer(email)) {
+        if (!mounted) return;
+        setState(() {
+          _status = 'approved';
+        });
+        return;
+      }
+
       final data = await UsersApi.getMyVerificationStatus();
       if (!mounted) return;
 

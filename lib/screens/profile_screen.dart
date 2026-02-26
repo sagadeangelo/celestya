@@ -18,6 +18,8 @@ import '../widgets/starry_background.dart';
 import '../widgets/voice_intro_widget.dart';
 import 'package:celestya/screens/image_viewer_screen.dart';
 import '../widgets/profile_image.dart';
+import '../review/review_mode.dart';
+import '../services/users_api.dart'; // To fetch the current email
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -332,85 +334,108 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _buildProfileHeader(context, profile, hasProfile),
-                        const SizedBox(height: 24),
-                        if (profile.photoUrls.isNotEmpty) ...[
-                          _buildPhotoGallery(context, profile),
-                          const SizedBox(height: 24),
-                        ],
-                        _buildVerificationCard(context, profile),
-                        const SizedBox(height: 24),
-                        if (hasProfile) ...[
-                          _buildCompletionIndicator(context, profile),
-                          const SizedBox(height: 24),
-                        ],
-                        if (hasProfile) ...[
-                          VoiceIntroWidget(profile: profile, ref: ref),
-                          const SizedBox(height: 24),
-                        ],
-                        if (hasProfile) ...[
-                          _buildLDSInfoCard(context, profile),
-                          const SizedBox(height: 24),
-                        ],
-                        if (_cleanString(profile.bio) != null) ...[
-                          _buildAboutMeSection(context, profile),
-                          const SizedBox(height: 24),
-                        ],
-                        if (hasProfile) ...[
-                          _buildDetailsSection(context, profile),
-                          const SizedBox(height: 24),
-                        ],
-                        if (profile.interests.isNotEmpty) ...[
-                          _buildInterestsSection(context, profile),
-                          const SizedBox(height: 24),
-                        ],
-                        _buildCompatibilitySection(context),
-                        const SizedBox(height: 24),
-                        if (!hasProfile) ...[
-                          _buildEmptyState(context),
-                        ],
-                        const SizedBox(height: 32),
-                        Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(30),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFFFE4E1).withOpacity(0.3),
-                                blurRadius: 15,
-                                spreadRadius: 1,
-                              ),
-                            ],
-                          ),
-                          child: OutlinedButton.icon(
-                            onPressed: () => _confirmLogout(context),
-                            icon: const Icon(Icons.logout),
-                            label: Text(loc.logout),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFFFFE4E1),
-                              side: BorderSide(
-                                  color:
-                                      const Color(0xFFFFE4E1).withOpacity(0.8)),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              backgroundColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30)),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 600),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            FutureBuilder<Me>(
+                              future: UsersApi.me(),
+                              builder: (context, snapshot) {
+                                if (snapshot.hasData &&
+                                    ReviewMode.isReviewer(
+                                        snapshot.data!.email)) {
+                                  return Column(
+                                    children: [
+                                      ReviewMode.buildReviewBanner(context),
+                                      const SizedBox(height: 16),
+                                    ],
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
                             ),
-                          ),
+                            _buildProfileHeader(context, profile, hasProfile),
+                            const SizedBox(height: 24),
+                            if (profile.photoUrls.isNotEmpty) ...[
+                              _buildPhotoGallery(context, profile),
+                              const SizedBox(height: 24),
+                            ],
+                            _buildVerificationCard(context, profile),
+                            const SizedBox(height: 24),
+                            if (hasProfile) ...[
+                              _buildCompletionIndicator(context, profile),
+                              const SizedBox(height: 24),
+                            ],
+                            if (hasProfile) ...[
+                              VoiceIntroWidget(profile: profile, ref: ref),
+                              const SizedBox(height: 24),
+                            ],
+                            if (hasProfile) ...[
+                              _buildLDSInfoCard(context, profile),
+                              const SizedBox(height: 24),
+                            ],
+                            if (_cleanString(profile.bio) != null) ...[
+                              _buildAboutMeSection(context, profile),
+                              const SizedBox(height: 24),
+                            ],
+                            if (hasProfile) ...[
+                              _buildDetailsSection(context, profile),
+                              const SizedBox(height: 24),
+                            ],
+                            if (profile.interests.isNotEmpty) ...[
+                              _buildInterestsSection(context, profile),
+                              const SizedBox(height: 24),
+                            ],
+                            _buildCompatibilitySection(context),
+                            const SizedBox(height: 24),
+                            if (!hasProfile) ...[
+                              _buildEmptyState(context),
+                            ],
+                            const SizedBox(height: 32),
+                            Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(30),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFFFE4E1)
+                                        .withOpacity(0.3),
+                                    blurRadius: 15,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
+                              child: OutlinedButton.icon(
+                                onPressed: () => _confirmLogout(context),
+                                icon: const Icon(Icons.logout),
+                                label: Text(loc.logout),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFFFFE4E1),
+                                  side: BorderSide(
+                                      color: const Color(0xFFFFE4E1)
+                                          .withOpacity(0.8)),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  backgroundColor: Colors.transparent,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30)),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextButton.icon(
+                              onPressed: () => _confirmDeleteAccount(context),
+                              icon: const Icon(Icons.delete_forever, size: 20),
+                              label: Text(loc.deleteAccount),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.white.withOpacity(0.5),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        TextButton.icon(
-                          onPressed: () => _confirmDeleteAccount(context),
-                          icon: const Icon(Icons.delete_forever, size: 20),
-                          label: Text(loc.deleteAccount),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white.withOpacity(0.5),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
+                      ),
                     ),
                   ),
                 );

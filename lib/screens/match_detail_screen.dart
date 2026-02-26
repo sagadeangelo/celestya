@@ -18,265 +18,277 @@ class MatchDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: CelestyaColors.cosmicCream,
-      body: CustomScrollView(
-        slivers: [
-          // 1. Expanded Photo AppBar
-          SliverAppBar(
-            expandedHeight: MediaQuery.of(context).size.height * 0.6,
-            pinned: true,
-            leading: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.4),
-                    shape: BoxShape.circle,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: CustomScrollView(
+            slivers: [
+              // 1. Expanded Photo AppBar
+              SliverAppBar(
+                expandedHeight: MediaQuery.of(context).size.height * 0.6,
+                pinned: true,
+                leading: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.4),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.arrow_back, color: Colors.white),
+                    ),
                   ),
-                  child: const Icon(Icons.arrow_back, color: Colors.white),
+                ),
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Hero(
+                    tag: 'match_photo_${candidate.id}',
+                    child: candidate.photoUrl != null &&
+                            candidate.photoUrl!.startsWith('http')
+                        ? Image.network(
+                            candidate.photoUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                Container(color: Colors.grey[900]),
+                          )
+                        : Image.file(
+                            File(candidate.photoUrl ?? ''),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                Container(color: Colors.grey[900]),
+                          ),
+                  ),
                 ),
               ),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Hero(
-                tag: 'match_photo_${candidate.id}',
-                child: candidate.photoUrl != null &&
-                        candidate.photoUrl!.startsWith('http')
-                    ? Image.network(
-                        candidate.photoUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            Container(color: Colors.grey[900]),
-                      )
-                    : Image.file(
-                        File(candidate.photoUrl ?? ''),
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            Container(color: Colors.grey[900]),
-                      ),
-              ),
-            ),
-          ),
 
-          // 2. Profile Details
-          SliverToBoxAdapter(
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: CelestyaColors.cosmicCream,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(30)),
-                gradient: CelestyaColors.softCreamGradient,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header Name & Age
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          candidate.age != null
-                              ? '${candidate.name}, ${candidate.age}'
-                              : candidate.name,
-                          style: Theme.of(context)
-                              .textTheme
-                              .displaySmall
-                              ?.copyWith(
-                                color: CelestyaColors.textPrimaryLight,
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                      ),
-                      // Compatibility Badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: CelestyaColors.celestialBlue.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                          border:
-                              Border.all(color: CelestyaColors.celestialBlue),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              candidate.compatibility > 0.8
-                                  ? Icons.favorite
-                                  : Icons.bolt,
-                              color: CelestyaColors.celestialBlue,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${(candidate.compatibility * 100).toInt()}%',
-                              style: const TextStyle(
-                                  color: CelestyaColors.textPrimaryLight,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      )
-                    ],
+              // 2. Profile Details
+              SliverToBoxAdapter(
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: CelestyaColors.cosmicCream,
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(30)),
+                    gradient: CelestyaColors.softCreamGradient,
                   ),
-                  const SizedBox(height: 8),
-
-                  // Location
-                  Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.location_on_outlined,
-                          color: CelestyaColors.textSecondaryLight, size: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          candidate.city,
-                          style:
-                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      // Header Name & Age
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              candidate.age != null
+                                  ? '${candidate.name}, ${candidate.age}'
+                                  : candidate.name,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .displaySmall
+                                  ?.copyWith(
+                                    color: CelestyaColors.textPrimaryLight,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                          ),
+                          // Compatibility Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color:
+                                  CelestyaColors.celestialBlue.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                  color: CelestyaColors.celestialBlue),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  candidate.compatibility > 0.8
+                                      ? Icons.favorite
+                                      : Icons.bolt,
+                                  color: CelestyaColors.celestialBlue,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${(candidate.compatibility * 100).toInt()}%',
+                                  style: const TextStyle(
+                                      color: CelestyaColors.textPrimaryLight,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Location
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on_outlined,
+                              color: CelestyaColors.textSecondaryLight,
+                              size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              candidate.city,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyLarge
+                                  ?.copyWith(
                                     color: CelestyaColors.textSecondaryLight,
                                   ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      if (candidate.voiceIntroPath != null) ...[
+                        MatchVoicePlayer(audioPath: candidate.voiceIntroPath!),
+                        const SizedBox(height: 24),
+                      ],
+
+                      const Divider(color: Colors.black12),
+                      const SizedBox(height: 24),
+
+                      // Bio
+                      Text(
+                        'Sobre mí',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: CelestyaColors.starlightGold,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        candidate.bio ?? 'Sin descripción.',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: CelestyaColors.textPrimaryLight
+                                  .withOpacity(0.9),
+                              height: 1.5,
+                            ),
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      // Interests
+                      if (candidate.interests.isNotEmpty) ...[
+                        Text(
+                          'Intereses',
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: CelestyaColors.starlightGold,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: candidate.interests
+                              .map((interest) => Chip(
+                                    label: Text(interest),
+                                    backgroundColor:
+                                        CelestyaColors.mysticalPurple,
+                                    labelStyle: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold),
+                                    side: BorderSide.none,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(20)),
+                                  ))
+                              .toList(),
+                        ),
+                        const SizedBox(height: 30),
+                      ],
+
+                      // Lifestyle / Basics
+                      _buildInfoRow(Icons.height, 'Altura',
+                          '${candidate.height.round()} cm'),
+                      _buildInfoRow(Icons.person, 'Complexión',
+                          candidate.bodyType ?? 'No especificado'),
+
+                      const SizedBox(height: 32),
+
+                      // Message Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () => _startChat(context),
+                          icon: const Icon(Icons.chat_bubble_outline),
+                          label: const Text("ENVIAR MENSAJE"),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: CelestyaColors.auroraTeal,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            textStyle: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
+
+                      const SizedBox(height: 32),
+
+                      // Safety Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showReportDialog(context),
+                              icon: const Icon(Icons.flag_outlined,
+                                  color: Colors.red),
+                              label: const Text('Reportar',
+                                  style: TextStyle(color: Colors.red)),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Colors.red),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _blockUser(context),
+                              icon: const Icon(Icons.block),
+                              label: const Text('Bloquear'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.grey[300],
+                                foregroundColor: Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Unmatch Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton.icon(
+                          onPressed: () => _unmatchUser(context),
+                          icon: const Icon(Icons.person_remove_outlined),
+                          label: const Text('Deshacer Match'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 100), // Bottom padding
                     ],
                   ),
-
-                  const SizedBox(height: 24),
-
-                  if (candidate.voiceIntroPath != null) ...[
-                    MatchVoicePlayer(audioPath: candidate.voiceIntroPath!),
-                    const SizedBox(height: 24),
-                  ],
-
-                  const Divider(color: Colors.black12),
-                  const SizedBox(height: 24),
-
-                  // Bio
-                  Text(
-                    'Sobre mí',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: CelestyaColors.starlightGold,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    candidate.bio ?? 'Sin descripción.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color:
-                              CelestyaColors.textPrimaryLight.withOpacity(0.9),
-                          height: 1.5,
-                        ),
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  // Interests
-                  if (candidate.interests.isNotEmpty) ...[
-                    Text(
-                      'Intereses',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: CelestyaColors.starlightGold,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: candidate.interests
-                          .map((interest) => Chip(
-                                label: Text(interest),
-                                backgroundColor: CelestyaColors.mysticalPurple,
-                                labelStyle: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold),
-                                side: BorderSide.none,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20)),
-                              ))
-                          .toList(),
-                    ),
-                    const SizedBox(height: 30),
-                  ],
-
-                  // Lifestyle / Basics
-                  _buildInfoRow(
-                      Icons.height, 'Altura', '${candidate.height.round()} cm'),
-                  _buildInfoRow(Icons.person, 'Complexión',
-                      candidate.bodyType ?? 'No especificado'),
-
-                  const SizedBox(height: 32),
-
-                  // Message Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () => _startChat(context),
-                      icon: const Icon(Icons.chat_bubble_outline),
-                      label: const Text("ENVIAR MENSAJE"),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: CelestyaColors.auroraTeal,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        textStyle: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Safety Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _showReportDialog(context),
-                          icon: const Icon(Icons.flag_outlined,
-                              color: Colors.red),
-                          label: const Text('Reportar',
-                              style: TextStyle(color: Colors.red)),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.red),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => _blockUser(context),
-                          icon: const Icon(Icons.block),
-                          label: const Text('Bloquear'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey[300],
-                            foregroundColor: Colors.black87,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Unmatch Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: TextButton.icon(
-                      onPressed: () => _unmatchUser(context),
-                      icon: const Icon(Icons.person_remove_outlined),
-                      label: const Text('Deshacer Match'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.grey[600],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 100), // Bottom padding
-                ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

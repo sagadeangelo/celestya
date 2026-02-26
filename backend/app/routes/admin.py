@@ -9,6 +9,8 @@ from ..security import utcnow
 from ..models import UserVerification, User
 from ..schemas import AdminVerificationOut, AdminRejectIn
 from ..services.r2_client import presigned_get_url
+from .auth import get_current_user
+from ..review_access import is_reviewer_admin, get_dummy_admin_verifications
 
 router = APIRouter()
 logger = structlog.get_logger("admin")
@@ -190,16 +192,20 @@ def verify_schema(db: Session = Depends(get_db)):
 # Admin Identity Verification
 # ----------------------------
 
-@router.get("/verifications", dependencies=[Depends(verify_admin_secret)], response_model=list[AdminVerificationOut])
+@router.get("/verifications", dependencies=[Depends(verify_admin_secret)])
 def list_verifications(
     status: str = "pending_review",
     limit: int = 50,
     offset: int = 0,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Lista solicitudes de verificación para revisión admin.
     """
+    # KILL-SWITCH: Google Play Review Admin Mock
+    if is_reviewer_admin(current_user.email):
+        return get_dummy_admin_verifications()
     # Si viene como 'pending' (legacy o error frontend), mapear a 'pending_review'
     if status == "pending":
         status = "pending_review"

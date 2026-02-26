@@ -291,7 +291,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
 
         // Maximize photo height, leaving just enough space for buttons (approx 100px + padding)
         final cardHeight = availableHeight - 140;
-        final cardWidth = availableWidth * 0.95; // Wider card
+        final cardWidth = (availableWidth * 0.95).clamp(0.0, 450.0);
 
         // Calculate rotation based on horizontal drag
         final rotation = _angle * 0.2; // Dampen rotation

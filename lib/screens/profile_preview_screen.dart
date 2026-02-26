@@ -39,12 +39,17 @@ class ProfilePreviewScreen extends StatelessWidget {
         child: SafeArea(
           child: Stack(
             children: [
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                child: PremiumMatchCard(
-                  candidate: candidate,
-                  isPreview: true, // Enable photo navigation
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 450),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 20),
+                    child: PremiumMatchCard(
+                      candidate: candidate,
+                      isPreview: true, // Enable photo navigation
+                    ),
+                  ),
                 ),
               ),
 
