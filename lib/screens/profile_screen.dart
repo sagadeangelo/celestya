@@ -1140,7 +1140,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               runSpacing: 8,
               children: profile.interests
                   .map((i) => Chip(
-                      label: Text(i),
+                      label: Text(
+                        i,
+                        style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
                       backgroundColor: theme.colorScheme.primaryContainer))
                   .toList(),
             ),

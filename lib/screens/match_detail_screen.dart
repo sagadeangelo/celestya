@@ -187,10 +187,10 @@ class MatchDetailScreen extends StatelessWidget {
                       children: candidate.interests
                           .map((interest) => Chip(
                                 label: Text(interest),
-                                backgroundColor: CelestyaColors.mysticalPurple
-                                    .withOpacity(0.3),
+                                backgroundColor: CelestyaColors.mysticalPurple,
                                 labelStyle: const TextStyle(
-                                    color: CelestyaColors.textPrimaryLight),
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold),
                                 side: BorderSide.none,
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(20)),
