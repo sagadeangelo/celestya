@@ -194,7 +194,12 @@ class MatchDetailScreen extends StatelessWidget {
                           runSpacing: 10,
                           children: candidate.interests
                               .map((interest) => Chip(
-                                    label: Text(interest),
+                                    label: Text(
+                                      interest,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold),
+                                    ),
                                     backgroundColor:
                                         CelestyaColors.mysticalPurple,
                                     labelStyle: const TextStyle(

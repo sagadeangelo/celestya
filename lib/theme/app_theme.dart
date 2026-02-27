@@ -128,9 +128,9 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(DesignTokens.radiusLarge),
           ),
-          textStyle: CelestyaTextStyles.labelLarge(colorScheme.onPrimary),
+          textStyle: CelestyaTextStyles.labelLarge(Colors.white),
           backgroundColor: colorScheme.primary,
-          foregroundColor: colorScheme.onPrimary,
+          foregroundColor: Colors.white,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -251,9 +251,10 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
+            color: Colors.white,
           ),
           backgroundColor: colorScheme.primary,
-          foregroundColor: colorScheme.onPrimary,
+          foregroundColor: Colors.white,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
