@@ -249,4 +249,38 @@ class UsersApi {
   }
 
   static String? getCachedUrl(String key) => _signedUrlCache[key];
+
+  /// Sube audios de presentación al backend.
+  /// Prompt 3 - Implementación de subida de audio.
+  static Future<void> uploadVoiceIntro(File audioFile) async {
+    final token = await AuthService.getToken();
+    final req = http.MultipartRequest(
+        'POST', Uri.parse('${ApiClient.API_BASE}/upload'));
+
+    if (token != null) {
+      req.headers['Authorization'] = 'Bearer $token';
+    }
+
+    final filename = audioFile.uri.pathSegments.last;
+    final ext = filename.split('.').last.toLowerCase();
+
+    req.files.add(await http.MultipartFile.fromPath(
+      'file',
+      audioFile.path,
+      filename: filename,
+      contentType: MediaType('audio', ext == 'm4a' ? 'x-m4a' : ext),
+    ));
+
+    final res = await req.send();
+    final body = await res.stream.bytesToString();
+
+    if (kDebugMode) {
+      debugPrint('[UsersApi] uploadVoiceIntro Status: ${res.statusCode}');
+      debugPrint('[UsersApi] uploadVoiceIntro Response: $body');
+    }
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('Error al subir audio (${res.statusCode}): $body');
+    }
+  }
 }

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from ..deps import get_current_user
 from ..database import get_db
 from .. import models, schemas
-from ..services.r2_client import presigned_get_url
+from ..services.r2_client import presigned_get_url, check_object_exists
 from ..limiter import limiter, LIMIT_PHOTO
 import structlog
 
@@ -62,6 +62,10 @@ def user_to_out(user: models.User) -> dict:
         if (utcnow() - last_seen_aware) < timedelta(minutes=5):
             is_online = True
 
+    # Voice Intro
+    exists = bool(user.voice_intro_key)
+    url = presigned_get_url(user.voice_intro_key, expires_seconds=3600) if exists else None
+    
     return {
         "id": user.id,
         "email": user.email,
@@ -97,12 +101,48 @@ def user_to_out(user: models.User) -> dict:
         "verification_status": user.verification_status,
         "rejection_reason": getattr(user.verifications[-1], "rejection_reason", None) if user.verifications and user.verification_status == "rejected" else None,
         "active_instruction": getattr(user.verifications[-1], "instruction", None) if user.verifications and user.verification_status == "pending_upload" else None,
+        
+        # Voice Intro (Fixed)
+        "voice_intro_exists": exists,
+        "voice_intro_url": url,
         "language": user.language,
     }
 
 
+def repair_voice_intro_if_missing(user: models.User, db: Session):
+    """
+    Prompt D: Reparación automática para usuarios que ya subieron audio pero no quedó en DB.
+    """
+    if user.voice_intro_key:
+        return
+
+    # Extensiones comunes a probar
+    extensions = ["m4a", "mp3", "aac", "mp4", "wav", "webm"]
+    for ext in extensions:
+        key = f"users/{user.id}/voice_intro.{ext}"
+        if check_object_exists(key):
+            try:
+                user.voice_intro_key = key
+                db.add(user)
+                db.commit()
+                logger.info("repair_triggered", user_id=user.id, found_ext=ext, key=key)
+            except Exception as e:
+                db.rollback()
+                logger.error("repair_failed", user_id=user.id, error=str(e))
+            break
+
+
 @router.get("/me", response_model=schemas.UserOut)
-def me(user: models.User = Depends(get_current_user)):
+def me(
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user)
+):
+    # Prompt D: Reparación automática al consultar perfil propio
+    repair_voice_intro_if_missing(user, db)
+    
+    exists = bool(user.voice_intro_key)
+    logger.info("profile_requested", user_id=user.id, voice_intro_exists=exists)
+    
     return user_to_out(user)
 
 

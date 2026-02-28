@@ -16,6 +16,7 @@ class MatchCandidate {
   final double compatibility; // 0.0 a 1.0 (100%)
   final String? bodyType; // Nuevo
   final String? voiceIntroPath;
+  final String? voiceIntroUrl;
   final String? maritalStatus; // Nuevo: 'Soltero(a)', etc.
   final bool? hasChildren; // Nuevo: true/false
   final String? photoKey;
@@ -38,6 +39,7 @@ class MatchCandidate {
     this.compatibility = 0.5,
     this.bodyType,
     this.voiceIntroPath,
+    this.voiceIntroUrl,
     this.maritalStatus,
     this.hasChildren,
     this.photoKey,

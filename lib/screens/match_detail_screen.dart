@@ -150,8 +150,11 @@ class MatchDetailScreen extends StatelessWidget {
 
                       const SizedBox(height: 24),
 
-                      if (candidate.voiceIntroPath != null) ...[
-                        MatchVoicePlayer(audioPath: candidate.voiceIntroPath!),
+                      if (candidate.voiceIntroUrl != null ||
+                          candidate.voiceIntroPath != null) ...[
+                        MatchVoicePlayer(
+                            audioPath: candidate.voiceIntroUrl ??
+                                candidate.voiceIntroPath!),
                         const SizedBox(height: 24),
                       ],
 

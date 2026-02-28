@@ -110,6 +110,9 @@ class SetPhotoKeyRequest(BaseModel):
     email: EmailStr
     profile_photo_key: str
 
+class EmailOnlyIn(BaseModel):
+    email: EmailStr
+
 @router.post("/set-photo-key")
 def set_photo_key_debug(
     request: SetPhotoKeyRequest,

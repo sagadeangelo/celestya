@@ -84,9 +84,6 @@ class UserUpdate(BaseModel):
     favorite_calling: Optional[str] = Field(None, alias="favoriteCalling")
     favorite_scripture: Optional[str] = Field(None, alias="favoriteScripture")
 
-    profile_photo_key: Optional[str] = None
-    gallery_photo_keys: Optional[List[str]] = None
-
     photo_path: Optional[str] = None
 
 
@@ -137,6 +134,10 @@ class UserOut(BaseModel):
     
     # Idioma
     language: Optional[str] = None
+
+    # Voice Intro
+    voice_intro_exists: bool = Field(False, alias="voiceIntroExists")
+    voice_intro_url: Optional[str] = Field(None, alias="voiceIntroUrl")
 
 
 class LanguageUpdateIn(BaseModel):

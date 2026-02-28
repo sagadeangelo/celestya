@@ -182,6 +182,9 @@ class MatchesApi {
       gender: u['gender']?.toString(), // Parse gender
       verificationStatus:
           (u['verification_status'] ?? u['verificationStatus'])?.toString(),
+      voiceIntroPath:
+          (u['voice_intro_path'] ?? u['voiceIntroPath'])?.toString(),
+      voiceIntroUrl: (u['voice_intro_url'] ?? u['voiceIntroUrl'])?.toString(),
     );
   }
 

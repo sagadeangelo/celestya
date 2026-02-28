@@ -27,6 +27,7 @@ class ProfilePreviewScreen extends StatelessWidget {
       interests: profile.interests,
       compatibility: 0.0, // Hidden for own profile preview
       voiceIntroPath: profile.voiceIntroPath,
+      voiceIntroUrl: profile.voiceIntroUrl,
       bodyType: profile.bodyType,
     );
 

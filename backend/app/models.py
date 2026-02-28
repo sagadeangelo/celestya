@@ -89,6 +89,7 @@ class User(Base):
     # ✅ recomendado: que tenga default al crear y update automático
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     last_seen = Column(DateTime(timezone=True), nullable=True)
+    voice_intro_key = Column(String(255), nullable=True, index=True)
 
     # Relación 1 a 1 con compat
     compat = relationship(

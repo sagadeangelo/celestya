@@ -99,3 +99,16 @@ def delete_object(key: str) -> None:
         )
     except Exception as e:
         logger.error(f"Failed to delete object {key}: {e}")
+
+def check_object_exists(key: str) -> bool:
+    """
+    Verifica si un objeto existe en el bucket R2.
+    """
+    try:
+        client = get_s3_client()
+        bucket = _get_bucket_name()
+        client.head_object(Bucket=bucket, Key=key)
+        return True
+    except Exception:
+        # 404 Not Found lanza excepción en boto3
+        return False

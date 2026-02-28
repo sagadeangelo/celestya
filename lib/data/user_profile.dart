@@ -201,6 +201,7 @@ class UserProfile {
   final List<String> galleryPhotoKeys;
 
   final String? voiceIntroPath;
+  final String? voiceIntroUrl;
 
   // Verification
   final String? verificationStatus;
@@ -233,6 +234,7 @@ class UserProfile {
     this.profilePhotoUrl,
     this.photoUrls = const [],
     this.voiceIntroPath,
+    this.voiceIntroUrl,
     this.emailVerified = false,
     this.birthdate,
     this.profilePhotoKey,
@@ -475,6 +477,8 @@ class UserProfile {
 
       voiceIntroPath:
           _cleanString(json['voice_intro_path'] ?? json['voiceIntroPath']),
+      voiceIntroUrl:
+          _cleanString(json['voice_intro_url'] ?? json['voiceIntroUrl']),
       emailVerified: json['email_verified'] as bool? ?? false,
 
       galleryPhotoKeys: (json['gallery_photo_keys'] as List<dynamic>?)
@@ -553,6 +557,7 @@ class UserProfile {
       galleryPhotoKeys: galleryPhotoKeys ?? this.galleryPhotoKeys,
       photoUrls: photoUrls ?? this.photoUrls,
       voiceIntroPath: voiceIntroPath ?? this.voiceIntroPath,
+      voiceIntroUrl: voiceIntroUrl ?? this.voiceIntroUrl,
       emailVerified: emailVerified ?? this.emailVerified,
       verificationStatus: verificationStatus ?? this.verificationStatus,
       rejectionReason: rejectionReason ?? this.rejectionReason,
