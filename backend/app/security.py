@@ -12,8 +12,8 @@ from jose import jwt, JWTError
 # ============================
 JWT_SECRET = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY") or ""
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-ACCESS_TOKEN_TTL_MINUTES = int(os.getenv("ACCESS_TOKEN_TTL_MINUTES", "60"))
-REFRESH_TOKEN_TTL_DAYS = int(os.getenv("REFRESH_TOKEN_TTL_DAYS", "30"))
+ACCESS_TOKEN_TTL_MINUTES = int(os.getenv("ACCESS_TOKEN_TTL_MINUTES", "525600"))
+REFRESH_TOKEN_TTL_DAYS = int(os.getenv("REFRESH_TOKEN_TTL_DAYS", "36500"))
 
 # Mantener alias anteriores por compatibilidad interna si se prefiere
 ACCESS_TOKEN_EXPIRE_MINUTES = ACCESS_TOKEN_TTL_MINUTES

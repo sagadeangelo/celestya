@@ -1,4 +1,4 @@
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
@@ -42,10 +42,11 @@ class AudioService {
   Future<void> playAudio(String path) async {
     try {
       if (path.startsWith('http')) {
-        await _player.play(UrlSource(path));
+        await _player.setUrl(path);
       } else {
-        await _player.play(DeviceFileSource(path));
+        await _player.setFilePath(path);
       }
+      await _player.play();
     } catch (e) {
       debugPrint('Error playing audio: $e');
     }
@@ -59,9 +60,10 @@ class AudioService {
     await _player.stop();
   }
 
-  Stream<Duration> get onPositionChanged => _player.onPositionChanged;
-  Stream<Duration> get onDurationChanged => _player.onDurationChanged;
-  Stream<void> get onPlayerComplete => _player.onPlayerComplete;
+  Stream<Duration> get onPositionChanged => _player.positionStream;
+  Stream<Duration?> get onDurationChanged => _player.durationStream;
+  Stream<void> get onPlayerComplete => _player.playerStateStream
+      .where((state) => state.processingState == ProcessingState.completed);
 
   void dispose() {
     _recorder.dispose();

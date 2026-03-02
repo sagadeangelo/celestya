@@ -20,9 +20,12 @@ class _MatchVoicePlayerState extends State<MatchVoicePlayer> {
   @override
   void initState() {
     super.initState();
-    _audioService.onDurationChanged.listen((d) => setState(() => _duration = d));
-    _audioService.onPositionChanged.listen((p) => setState(() => _position = p));
-    _audioService.onPlayerComplete.listen((_) => setState(() => _isPlaying = false));
+    _audioService.onDurationChanged
+        .listen((d) => setState(() => _duration = d ?? Duration.zero));
+    _audioService.onPositionChanged
+        .listen((p) => setState(() => _position = p));
+    _audioService.onPlayerComplete
+        .listen((_) => setState(() => _isPlaying = false));
   }
 
   @override
@@ -53,7 +56,8 @@ class _MatchVoicePlayerState extends State<MatchVoicePlayer> {
       decoration: BoxDecoration(
         color: CelestyaColors.mysticalPurple.withOpacity(0.1),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: CelestyaColors.mysticalPurple.withOpacity(0.3)),
+        border:
+            Border.all(color: CelestyaColors.mysticalPurple.withOpacity(0.3)),
       ),
       child: Row(
         children: [
@@ -88,17 +92,19 @@ class _MatchVoicePlayerState extends State<MatchVoicePlayer> {
                 SliderTheme(
                   data: SliderTheme.of(context).copyWith(
                     trackHeight: 3,
-                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                    thumbShape:
+                        const RoundSliderThumbShape(enabledThumbRadius: 5),
+                    overlayShape:
+                        const RoundSliderOverlayShape(overlayRadius: 10),
                     activeTrackColor: CelestyaColors.starDust,
                     inactiveTrackColor: Colors.white10,
                     thumbColor: CelestyaColors.starDust,
                   ),
                   child: Slider(
                     value: _position.inMilliseconds.toDouble(),
-                    max: _duration.inMilliseconds.toDouble() > 0 
-                          ? _duration.inMilliseconds.toDouble() 
-                          : 1.0,
+                    max: _duration.inMilliseconds.toDouble() > 0
+                        ? _duration.inMilliseconds.toDouble()
+                        : 1.0,
                     onChanged: (val) {
                       // Seek logic if needed
                     },
@@ -109,8 +115,12 @@ class _MatchVoicePlayerState extends State<MatchVoicePlayer> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(_formatDuration(_position), style: const TextStyle(color: Colors.white54, fontSize: 10)),
-                      Text(_formatDuration(_duration), style: const TextStyle(color: Colors.white54, fontSize: 10)),
+                      Text(_formatDuration(_position),
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 10)),
+                      Text(_formatDuration(_duration),
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 10)),
                     ],
                   ),
                 ),

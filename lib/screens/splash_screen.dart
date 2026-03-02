@@ -34,8 +34,8 @@ class _SplashScreenState extends State<SplashScreen>
 
     // Eclipse Light Rotation
     _rotationController = AnimationController(
-       vsync: this,
-       duration: const Duration(seconds: 3),
+      vsync: this,
+      duration: const Duration(seconds: 3),
     )..repeat();
 
     // Subtle Continuous Pulse (Breathing)
@@ -85,12 +85,13 @@ class _SplashScreenState extends State<SplashScreen>
         // Check onboarding status
         final prefs = await SharedPreferences.getInstance();
         final seenOnboarding = prefs.getBool('onboarding_completed') ?? false;
-        
+
         if (!mounted) return;
 
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
-            pageBuilder: (_, __, ___) => seenOnboarding ? const AuthGate() : const OnboardingScreen(),
+            pageBuilder: (_, __, ___) =>
+                seenOnboarding ? const AuthGate() : const OnboardingScreen(),
             transitionsBuilder: (_, animation, __, child) {
               return FadeTransition(opacity: animation, child: child);
             },
@@ -128,108 +129,119 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         child: Container(
           decoration: BoxDecoration(
-             gradient: LinearGradient(
-               begin: Alignment.topCenter,
-               end: Alignment.bottomCenter,
-               colors: [
-                 CelestyaColors.celestialBlue.withOpacity(0.15), // Soft diffused blue veil
-                 Colors.transparent,
-               ],
-             )
-          ),
-        child: Center(
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              return Opacity(
-                opacity: _opacityAnimation.value,
-                child: Transform.scale(
-                  scale: _scaleAnimation.value,
-                  child: child,
-                ),
-              );
-            },
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo con Luz Circundante
-                ScaleTransition(
-                  scale: _pulseAnimation,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                    // 1. Luz Circundante (Eclipse Ring)
-                    RotationTransition(
-                      turns: _rotationController,
-                      child: Container(
-                        width: 208, // Thinner ring (208 vs 200 logo = 4px visible border)
-                        height: 208,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: SweepGradient(
-                            colors: [
-                              Colors.transparent,
-                              const Color(0xFFC0C0C0).withOpacity(0.0), // Silver start
-                              const Color(0xFFE0E0E0), // Bright Silver head
-                              Colors.white, // Core of the light (Luminosity)
-                              const Color(0xFFE0E0E0), // Silver tail
-                              const Color(0xFFC0C0C0).withOpacity(0.0),
-                              Colors.transparent,
-                            ],
-                            stops: const [0.0, 0.7, 0.85, 0.9, 0.95, 1.0, 1.0],
+              gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              CelestyaColors.celestialBlue
+                  .withOpacity(0.15), // Soft diffused blue veil
+              Colors.transparent,
+            ],
+          )),
+          child: Center(
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _opacityAnimation.value,
+                  child: Transform.scale(
+                    scale: _scaleAnimation.value,
+                    child: child,
+                  ),
+                );
+              },
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo con Luz Circundante
+                  ScaleTransition(
+                    scale: _pulseAnimation,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // 1. Luz Circundante (Eclipse Ring)
+                        RotationTransition(
+                          turns: _rotationController,
+                          child: Container(
+                            width:
+                                208, // Thinner ring (208 vs 200 logo = 4px visible border)
+                            height: 208,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: SweepGradient(
+                                colors: [
+                                  Colors.transparent,
+                                  const Color(0xFFC0C0C0)
+                                      .withOpacity(0.0), // Silver start
+                                  const Color(0xFFE0E0E0), // Bright Silver head
+                                  Colors
+                                      .white, // Core of the light (Luminosity)
+                                  const Color(0xFFE0E0E0), // Silver tail
+                                  const Color(0xFFC0C0C0).withOpacity(0.0),
+                                  Colors.transparent,
+                                ],
+                                stops: const [
+                                  0.0,
+                                  0.7,
+                                  0.85,
+                                  0.9,
+                                  0.95,
+                                  1.0,
+                                  1.0
+                                ],
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    
-                    // 2. Logo Central
-                    Container(
-                      width: 200,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF9B5CFF).withOpacity(0.3),
-                            blurRadius: 40,
-                            spreadRadius: 10,
+
+                        // 2. Logo Central
+                        Container(
+                          width: 200,
+                          height: 200,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF9B5CFF).withOpacity(0.3),
+                                blurRadius: 40,
+                                spreadRadius: 10,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: Image.asset(
-                        'assets/app_icon.png',
-                        fit: BoxFit.contain,
-                      ),
+                          child: Image.asset(
+                            'assets/app_icon.png',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 32),
+                  // Nombre con gradiente
+                  const Text(
+                    'Celestya',
+                    style: TextStyle(
+                      fontSize: 42,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Tagline
+                  Text(
+                    'Tu media naranja te espera ✨',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white.withOpacity(0.8),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
               ),
-                const SizedBox(height: 32),
-                // Nombre con gradiente
-                const Text(
-                  'Celestya',
-                  style: TextStyle(
-                    fontSize: 42,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Tagline
-                Text(
-                  'Tu media naranja te espera ✨',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white.withOpacity(0.8),
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
             ),
           ),
         ),
-       ),
       ),
     );
   }

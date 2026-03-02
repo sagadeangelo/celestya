@@ -42,7 +42,7 @@ class _VoiceIntroWidgetState extends State<VoiceIntroWidget> {
     _recordedPath = widget.profile.voiceIntroPath;
 
     _audioService.onDurationChanged
-        .listen((d) => setState(() => _duration = d));
+        .listen((d) => setState(() => _duration = d ?? Duration.zero));
     _audioService.onPositionChanged
         .listen((p) => setState(() => _position = p));
     _audioService.onPlayerComplete
