@@ -55,8 +55,9 @@ class AuthService {
           access: data['access_token'],
           refresh: data['refresh_token'],
         );
-        if (kDebugMode)
+        if (kDebugMode) {
           debugPrint('[AuthService] Token refreshed successfully.');
+        }
         return true;
       }
       return false;
@@ -69,8 +70,16 @@ class AuthService {
   static Future<void> logout() async {
     await TokenStorage.deleteTokens();
     _memToken = null;
+
+    // ⚠️ Do NOT call prefs.clear() — that would wipe 'onboarding_completed'
+    // and show the onboarding slides again after every logout.
+    // Only remove auth-specific keys.
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    await prefs.remove('pending_verification_email');
+
+    if (kDebugMode) {
+      debugPrint('[LOGOUT] Tokens cleared. onboarding_completed preserved.');
+    }
   }
 
   static Future<String?> getAuthHeader() async {
